@@ -12,6 +12,7 @@ class User(UserMixin, db.Model):
     mpin = db.Column(db.String(6), nullable=True)
     has_seen_tutorial = db.Column(db.Boolean, default=False, nullable=False)
     last_monthly_reset = db.Column(db.DateTime, nullable=True)
+    notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     incomes = db.relationship('Income', backref='user', lazy=True)
     expenses = db.relationship('Expense', backref='user', lazy=True)
     goals = db.relationship('Goal', backref='user', lazy=True)

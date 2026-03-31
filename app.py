@@ -107,6 +107,7 @@ with app.app_context():
         "ALTER TABLE expense ADD COLUMN sub_end_date DATETIME",
         "ALTER TABLE expense ADD COLUMN sub_expired_notified BOOLEAN DEFAULT 0",
         "ALTER TABLE user ADD COLUMN mpin VARCHAR(6)",
+        "ALTER TABLE user ADD COLUMN notifications_enabled BOOLEAN DEFAULT 1 NOT NULL",
     ]
     for stmt in migration_stmts:
         try:
@@ -976,6 +977,69 @@ def profile():
 @login_required
 def settings():
     return render_template("settings.html")
+
+
+@app.route("/change-email", methods=["POST"])
+@login_required
+def change_email():
+    new_email = request.form.get("new_email", "").strip()
+    current_password = request.form.get("current_password", "").strip()
+    if current_user.password != current_password:
+        flash("Password is incorrect.", "danger")
+    elif not new_email or "@" not in new_email:
+        flash("Please enter a valid email address.", "danger")
+    elif User.query.filter(User.email == new_email, User.id != current_user.id).first():
+        flash("That email is already in use by another account.", "danger")
+    else:
+        current_user.email = new_email
+        db.session.commit()
+        flash("Email updated successfully!", "success")
+    return redirect(url_for("settings"))
+
+
+@app.route("/toggle-notifications", methods=["POST"])
+@login_required
+def toggle_notifications():
+    current_user.notifications_enabled = not current_user.notifications_enabled
+    db.session.commit()
+    state = "enabled" if current_user.notifications_enabled else "disabled"
+    flash(f"Pop notifications {state}.", "success")
+    return redirect(url_for("settings"))
+
+
+@app.route("/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    current_password = request.form.get("current_password", "").strip()
+    if current_user.password != current_password:
+        flash("Incorrect password. Account not deleted.", "danger")
+        return redirect(url_for("settings"))
+    user = current_user
+    logout_user()
+    from models import Income, Expense, Goal
+    Income.query.filter_by(user_id=user.id).delete()
+    Expense.query.filter_by(user_id=user.id).delete()
+    Goal.query.filter_by(user_id=user.id).delete()
+    db.session.delete(user)
+    db.session.commit()
+    flash("Your account has been permanently deleted.", "info")
+    return redirect(url_for("index"))
+
+
+@app.route("/request-account-info")
+@login_required
+def request_account_info():
+    from models import Income, Expense, Goal
+    incomes = Income.query.filter_by(user_id=current_user.id).order_by(Income.date_received.desc()).all()
+    expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
+    goals = Goal.query.filter_by(user_id=current_user.id).all()
+    return render_template(
+        "account_info.html",
+        incomes=incomes,
+        expenses=expenses,
+        goals=goals,
+        now=datetime.utcnow(),
+    )
 
 
 @app.route("/change-password", methods=["POST"])
