@@ -10,9 +10,30 @@
   </div>
   <div class="d-flex align-items-center gap-3 flex-wrap">
     <div class="dashboard-clock">
-      <div class="clock-date">{{ now.strftime('%A, %d %b %Y') }}</div>
-      <div class="clock-time">{{ now.strftime('%I:%M %p') }}</div>
+      <div class="clock-date" id="live-clock-date"></div>
+      <div class="clock-time" id="live-clock-time"></div>
     </div>
+    <script>
+      (function() {
+        function updateClock() {
+          var now = new Date();
+          var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+          var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          var day = days[now.getDay()];
+          var date = String(now.getDate()).padStart(2, '0');
+          var month = months[now.getMonth()];
+          var year = now.getFullYear();
+          document.getElementById('live-clock-date').textContent = day + ', ' + date + ' ' + month + ' ' + year;
+          var hours = now.getHours();
+          var minutes = String(now.getMinutes()).padStart(2, '0');
+          var ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12 || 12;
+          document.getElementById('live-clock-time').textContent = String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+      })();
+    </script>
     <div class="d-flex gap-2">
       <a href="{{ url_for('add_income') }}" class="btn btn-success btn-sm"><i class="bi bi-plus me-1"></i>Income</a>
       <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Expense</a>
