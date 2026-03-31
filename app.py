@@ -872,10 +872,10 @@ def login():
         return redirect(url_for("dashboard"))
     form = LoginForm()
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip().lower()
         mpin_input = request.form.get("mpin_input", "").strip()
         password_input = request.form.get("password", "").strip()
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(User.email.ilike(email)).first()
         if user:
             if mpin_input:
                 if user.mpin and user.mpin == mpin_input:
@@ -886,7 +886,7 @@ def login():
                 else:
                     flash("Incorrect MPIN. Please try again.", "danger")
                     return render_template("login.html", form=form,
-                                           prefill_username=username, show_mpin=True)
+                                           prefill_email=email, show_mpin=True)
             elif password_input:
                 if user.password == password_input:
                     login_user(user)
@@ -896,19 +896,19 @@ def login():
                 else:
                     flash("Incorrect password. Please try again.", "danger")
                     return render_template("login.html", form=form,
-                                           prefill_username=username,
+                                           prefill_email=email,
                                            show_mpin=bool(user.mpin))
         else:
-            flash("No account found with that username.", "danger")
+            flash("No account found with that email.", "danger")
     return render_template("login.html", form=form)
 
 
 @app.route("/check-mpin-status")
 def check_mpin_status():
-    username = request.args.get("username", "").strip()
-    user = User.query.filter_by(username=username).first()
+    email = request.args.get("email", "").strip().lower()
+    user = User.query.filter(User.email.ilike(email)).first()
     if user:
-        return jsonify({"exists": True, "has_mpin": bool(user.mpin)})
+        return jsonify({"exists": True, "has_mpin": bool(user.mpin), "username": user.username})
     return jsonify({"exists": False, "has_mpin": False})
 
 

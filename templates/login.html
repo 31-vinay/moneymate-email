@@ -94,20 +94,20 @@
     </div>
     <div class="auth-body">
 
-      <!-- ── STEP 1: Username ── -->
-      <div id="step-username" {% if show_mpin is defined and show_mpin %}style="display:none"{% endif %}>
-        <form id="usernameForm" onsubmit="checkUser(event)">
+      <!-- ── STEP 1: Email ── -->
+      <div id="step-email" {% if show_mpin is defined and show_mpin %}style="display:none"{% endif %}>
+        <form id="emailForm" onsubmit="checkUser(event)">
           {{ form.hidden_tag() }}
           <div class="mb-4">
-            <label class="form-label">Username</label>
+            <label class="form-label">Email Address</label>
             <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-person"></i></span>
-              <input type="text" id="usernameInput" class="form-control"
-                     placeholder="Enter your username"
-                     value="{{ prefill_username or '' }}"
-                     autocomplete="username">
+              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+              <input type="email" id="emailInput" class="form-control"
+                     placeholder="Enter your email"
+                     value="{{ prefill_email or '' }}"
+                     autocomplete="email">
             </div>
-            <small id="usernameError" class="text-danger" style="display:none;"></small>
+            <small id="emailError" class="text-danger" style="display:none;"></small>
           </div>
           <button type="submit" class="btn-auth" id="continueBtn">
             <span id="continueBtnText"><i class="bi bi-arrow-right-circle me-2"></i>Continue</span>
@@ -123,11 +123,11 @@
 
       <!-- ── STEP 2A: MPIN numpad ── -->
       <div id="step-mpin" style="display:none">
-        <div class="mpin-user-chip" onclick="goBackToUsername()">
+        <div class="mpin-user-chip" onclick="goBackToEmail()">
           <div class="avatar" id="mpinAvatar">?</div>
           <div>
             <div class="uname" id="mpinUsernameLabel"></div>
-            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change user</div>
+            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change account</div>
           </div>
         </div>
         <p style="text-align:center;font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px;">Enter your 6-digit MPIN</p>
@@ -136,7 +136,7 @@
         </div>
         <form id="mpinForm" method="POST" action="{{ url_for('login') }}">
           {{ form.hidden_tag() }}
-          <input type="hidden" name="username"   id="mpinUsername">
+          <input type="hidden" name="email"      id="mpinEmail">
           <input type="hidden" name="mpin_input" id="mpinValue">
         </form>
         <div class="numpad">
@@ -154,16 +154,16 @@
 
       <!-- ── STEP 2B: Password ── -->
       <div id="step-password" style="display:none">
-        <div class="mpin-user-chip" onclick="goBackToUsername()">
+        <div class="mpin-user-chip" onclick="goBackToEmail()">
           <div class="avatar" id="pwdAvatar">?</div>
           <div>
             <div class="uname" id="pwdUsernameLabel"></div>
-            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change user</div>
+            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change account</div>
           </div>
         </div>
         <form id="pwdForm" method="POST" action="{{ url_for('login') }}">
           {{ form.hidden_tag() }}
-          <input type="hidden" name="username" id="pwdUsername">
+          <input type="hidden" name="email" id="pwdEmail">
           <div class="mb-4">
             <label class="form-label">Password</label>
             <div class="input-group">
@@ -184,66 +184,68 @@
 
 <script>
 let loginPin = '';
+let currentEmail = '';
 let currentUsername = '';
 
-// On load — if server said show_mpin or show password, switch directly
 (function () {
   {% if show_mpin is defined and show_mpin %}
-    const u = "{{ prefill_username or '' }}";
-    if (u) showMpinStep(u);
-  {% elif prefill_username is defined and prefill_username and show_mpin is defined and not show_mpin %}
-    const u = "{{ prefill_username or '' }}";
-    if (u) showPasswordStep(u);
+    const e = "{{ prefill_email or '' }}";
+    if (e) showMpinStep(e, e);
+  {% elif prefill_email is defined and prefill_email and show_mpin is defined and not show_mpin %}
+    const e = "{{ prefill_email or '' }}";
+    if (e) showPasswordStep(e, e);
   {% endif %}
 })();
 
 function checkUser(e) {
   e.preventDefault();
-  const u = document.getElementById('usernameInput').value.trim();
-  if (!u) { showUsernameError('Please enter your username.'); return; }
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email) { showEmailError('Please enter your email address.'); return; }
   document.getElementById('continueBtnText').style.display = 'none';
   document.getElementById('continueBtnSpinner').style.display = 'inline';
   document.getElementById('continueBtn').disabled = true;
 
-  fetch('/check-mpin-status?username=' + encodeURIComponent(u))
+  fetch('/check-mpin-status?email=' + encodeURIComponent(email))
     .then(r => r.json())
     .then(data => {
       if (!data.exists) {
-        showUsernameError('No account found with that username.');
+        showEmailError('No account found with that email.');
         document.getElementById('continueBtnText').style.display = 'inline';
         document.getElementById('continueBtnSpinner').style.display = 'none';
         document.getElementById('continueBtn').disabled = false;
       } else if (data.has_mpin) {
-        showMpinStep(u);
+        showMpinStep(email, data.username);
       } else {
-        showPasswordStep(u);
+        showPasswordStep(email, data.username);
       }
     });
 }
 
-function showMpinStep(username) {
-  currentUsername = username;
-  document.getElementById('step-username').style.display = 'none';
+function showMpinStep(email, username) {
+  currentEmail = email;
+  currentUsername = username || email;
+  document.getElementById('step-email').style.display = 'none';
   document.getElementById('step-mpin').style.display = 'block';
-  const initial = username.charAt(0).toUpperCase();
+  const initial = (username || email).charAt(0).toUpperCase();
   document.getElementById('mpinAvatar').textContent = initial;
-  document.getElementById('mpinUsernameLabel').textContent = username;
-  document.getElementById('mpinUsername').value = username;
+  document.getElementById('mpinUsernameLabel').textContent = username || email;
+  document.getElementById('mpinEmail').value = email;
   document.getElementById('headerIcon').innerHTML = '<i class="bi bi-shield-lock-fill"></i>';
   document.getElementById('headerTitle').textContent = 'Enter MPIN';
   document.getElementById('headerSub').textContent = 'Your 6-digit quick-login PIN';
   loginPin = ''; updateLoginDots();
 }
 
-function showPasswordStep(username) {
-  currentUsername = username;
-  document.getElementById('step-username').style.display = 'none';
+function showPasswordStep(email, username) {
+  currentEmail = email;
+  currentUsername = username || email;
+  document.getElementById('step-email').style.display = 'none';
   document.getElementById('step-mpin').style.display = 'none';
   document.getElementById('step-password').style.display = 'block';
-  const initial = username.charAt(0).toUpperCase();
+  const initial = (username || email).charAt(0).toUpperCase();
   document.getElementById('pwdAvatar').textContent = initial;
-  document.getElementById('pwdUsernameLabel').textContent = username;
-  document.getElementById('pwdUsername').value = username;
+  document.getElementById('pwdUsernameLabel').textContent = username || email;
+  document.getElementById('pwdEmail').value = email;
   document.getElementById('headerIcon').innerHTML = '<i class="bi bi-lock-fill"></i>';
   document.getElementById('headerTitle').textContent = 'Enter Password';
   document.getElementById('headerSub').textContent = 'Secure access to your account';
@@ -251,13 +253,13 @@ function showPasswordStep(username) {
 }
 
 function switchToPassword() {
-  showPasswordStep(currentUsername);
+  showPasswordStep(currentEmail, currentUsername);
 }
 
-function goBackToUsername() {
+function goBackToEmail() {
   document.getElementById('step-mpin').style.display = 'none';
   document.getElementById('step-password').style.display = 'none';
-  document.getElementById('step-username').style.display = 'block';
+  document.getElementById('step-email').style.display = 'block';
   document.getElementById('headerIcon').innerHTML = '<i class="bi bi-person-fill"></i>';
   document.getElementById('headerTitle').textContent = 'Welcome Back';
   document.getElementById('headerSub').textContent = 'Sign in to your Money Mate account';
@@ -290,10 +292,10 @@ function loginPadBack() {
   updateLoginDots();
 }
 
-function showUsernameError(msg) {
-  const el = document.getElementById('usernameError');
+function showEmailError(msg) {
+  const el = document.getElementById('emailError');
   el.textContent = msg; el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
+  setTimeout(() => el.style.display = 'none', 3500);
 }
 </script>
 
