@@ -90,7 +90,7 @@ def create_admin():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 # Create tables and run any needed column migrations
@@ -1016,7 +1016,6 @@ def delete_account():
         return redirect(url_for("settings"))
     user = current_user
     logout_user()
-    from models import Income, Expense, Goal
     Income.query.filter_by(user_id=user.id).delete()
     Expense.query.filter_by(user_id=user.id).delete()
     Goal.query.filter_by(user_id=user.id).delete()
@@ -1029,7 +1028,6 @@ def delete_account():
 @app.route("/request-account-info")
 @login_required
 def request_account_info():
-    from models import Income, Expense, Goal
     incomes = Income.query.filter_by(user_id=current_user.id).order_by(Income.date_received.desc()).all()
     expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
     goals = Goal.query.filter_by(user_id=current_user.id).all()
