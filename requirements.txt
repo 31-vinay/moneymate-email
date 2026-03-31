@@ -40,3 +40,15 @@ sqlalchemy
 werkzeug
 wtforms
 beautifulsoup4
+beautifulsoup4
+email-validator
+flask
+flask-admin
+flask-login
+flask-sqlalchemy
+flask-wtf
+gunicorn
+matplotlib
+sqlalchemy
+werkzeug
+wtforms
