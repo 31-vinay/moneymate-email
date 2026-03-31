@@ -20,6 +20,7 @@
   border-radius: 50%;
   background: rgba(255,255,255,0.05);
   top: -150px; right: -100px;
+  pointer-events: none;
 }
 
 .hero-section::after {
@@ -29,6 +30,7 @@
   border-radius: 50%;
   background: rgba(255,255,255,0.05);
   bottom: -120px; left: -80px;
+  pointer-events: none;
 }
 
 .hero-badge {
@@ -72,6 +74,8 @@
   gap: 1rem;
   justify-content: center;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .btn-hero-primary {
