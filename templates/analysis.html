@@ -152,44 +152,9 @@
 </div>
 
 <!-- Category table -->
-{% if categories or filter_days %}
-<!-- Day filter bar -->
-<div class="card mb-3 fade-in fade-in-delay-3">
-  <div class="card-body py-2 px-3">
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <span class="fw-semibold me-1" style="font-size:0.85rem;color:var(--text-muted);">
-        <i class="bi bi-funnel me-1"></i>Show expenses for:
-      </span>
-      {% for preset in [7, 14, 30, 60, 90] %}
-      <a href="{{ url_for('analysis', days=preset) }}"
-         class="btn btn-sm rounded-pill {% if filter_days == preset %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-         style="font-size:0.78rem;padding:3px 12px;">
-        {{ preset }}d
-      </a>
-      {% endfor %}
-      <a href="{{ url_for('analysis') }}"
-         class="btn btn-sm rounded-pill {% if not filter_days %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-         style="font-size:0.78rem;padding:3px 12px;">
-        This Month
-      </a>
-      <form method="get" action="{{ url_for('analysis') }}" class="d-flex align-items-center gap-1 ms-1">
-        <input type="number" name="days" min="1" max="365"
-               value="{{ filter_days or '' }}"
-               placeholder="Custom days"
-               class="form-control form-control-sm"
-               style="width:110px;font-size:0.78rem;">
-        <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:0.78rem;padding:3px 12px;">
-          Go
-        </button>
-      </form>
-    </div>
-  </div>
-</div>
 {% if categories %}
 <div class="card mb-4 fade-in fade-in-delay-3">
-  <div class="card-header">
-    <i class="bi bi-table me-2"></i>Category Summary — {{ filter_label }}
-  </div>
+  <div class="card-header"><i class="bi bi-table me-2"></i>Category Summary — This Month</div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0">
@@ -234,8 +199,6 @@
     </div>
   </div>
 </div>
-{% endif %}
-
 {% endif %}
 
 {% endif %}

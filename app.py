@@ -1374,12 +1374,31 @@ def add_expense():
     else:
         form.sub_category.choices = [("", "-- Select Sub Category First --")]
 
-    expenses = (
-        Expense.query.filter_by(user_id=current_user.id)
-        .order_by(Expense.date.desc())
-        .all()
+    # Day filter for expense list
+    try:
+        exp_filter_days = int(request.args.get("days", 0))
+        if exp_filter_days <= 0:
+            exp_filter_days = None
+    except (ValueError, TypeError):
+        exp_filter_days = None
+
+    expense_query = Expense.query.filter_by(user_id=current_user.id)
+    if exp_filter_days:
+        since = datetime.utcnow() - timedelta(days=exp_filter_days)
+        expense_query = expense_query.filter(Expense.date >= since)
+        exp_filter_label = f"Last {exp_filter_days} day{'s' if exp_filter_days != 1 else ''}"
+    else:
+        exp_filter_label = "All Time"
+
+    expenses = expense_query.order_by(Expense.date.desc()).all()
+    return render_template(
+        "add_expense.html",
+        form=form,
+        edit=False,
+        expenses=expenses,
+        exp_filter_days=exp_filter_days,
+        exp_filter_label=exp_filter_label,
     )
-    return render_template("add_expense.html", form=form, edit=False, expenses=expenses)
 
 
 @app.route("/edit_expense/<int:id>", methods=["GET", "POST"])
@@ -1797,21 +1816,6 @@ def analysis():
     month_start = datetime(now.year, now.month, 1)
     six_months_ago = now - timedelta(days=180)
 
-    # Custom day filter for category table
-    try:
-        filter_days = int(request.args.get("days", 0))
-        if filter_days <= 0:
-            filter_days = None
-    except (ValueError, TypeError):
-        filter_days = None
-
-    if filter_days:
-        cat_since = now - timedelta(days=filter_days)
-        filter_label = f"Last {filter_days} day{'s' if filter_days != 1 else ''}"
-    else:
-        cat_since = month_start
-        filter_label = "This Month"
-
     expenses_month = Expense.query.filter(
         Expense.user_id == current_user.id,
         Expense.date >= month_start
@@ -1827,14 +1831,8 @@ def analysis():
         Income.date_received >= six_months_ago
     ).all()
 
-    # Category breakdown uses the custom filter window
-    expenses_filtered = Expense.query.filter(
-        Expense.user_id == current_user.id,
-        Expense.date >= cat_since
-    ).all()
-
     categories = {}
-    for e in expenses_filtered:
+    for e in expenses_month:
         categories[e.category] = categories.get(e.category, 0) + e.amount
 
     monthly_spending = defaultdict(float)
@@ -1884,8 +1882,6 @@ def analysis():
         non_essential=non_essential,
         burn_rate=burn_rate,
         now=now,
-        filter_days=filter_days,
-        filter_label=filter_label,
     )
 
 
