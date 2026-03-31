@@ -29,10 +29,17 @@ from email.header import decode_header
 from email.utils import parsedate_to_datetime
 import re
 import ssl
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+_plt_cache = None
+
+def _get_plt():
+    global _plt_cache
+    if _plt_cache is None:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as _plt
+        _plt_cache = _plt
+    return _plt_cache
+
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
@@ -1766,6 +1773,7 @@ def what_if(id):
 
 
 def make_chart(fig):
+    plt = _get_plt()
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight', dpi=110, transparent=True)
     buf.seek(0)
@@ -1775,6 +1783,7 @@ def make_chart(fig):
 
 
 def chart_expense_distribution(categories):
+    plt = _get_plt()
     if not categories:
         return None
     labels = list(categories.keys())
@@ -1801,6 +1810,7 @@ def chart_expense_distribution(categories):
 
 
 def chart_income_vs_expense(monthly_inc, monthly_exp):
+    plt = _get_plt()
     months = sorted(set(list(monthly_inc.keys()) + list(monthly_exp.keys())))
     if not months:
         return None
@@ -1836,6 +1846,7 @@ def chart_income_vs_expense(monthly_inc, monthly_exp):
 
 
 def chart_monthly_trend(monthly_spending):
+    plt = _get_plt()
     if not monthly_spending:
         return None
     months = list(monthly_spending.keys())
@@ -1865,6 +1876,7 @@ def chart_monthly_trend(monthly_spending):
 
 
 def chart_category_breakdown(categories):
+    plt = _get_plt()
     if not categories:
         return None
     sorted_cats = sorted(categories.items(), key=lambda x: x[1], reverse=True)[:8]
