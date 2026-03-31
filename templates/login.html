@@ -2,97 +2,259 @@
 {% block content %}
 
 <style>
+/* ── Neumorphic base ── */
+:root {
+  --nm-bg: #e8ecf1;
+  --nm-shadow-light: #ffffff;
+  --nm-shadow-dark: #c5ccd6;
+  --nm-text: #4a5568;
+  --nm-text-sub: #718096;
+  --nm-accent: #6C5CE7;
+}
+.dark-mode {
+  --nm-bg: #1e2130;
+  --nm-shadow-light: rgba(255,255,255,0.04);
+  --nm-shadow-dark: rgba(0,0,0,0.45);
+  --nm-text: #e2e8f0;
+  --nm-text-sub: #a0aec0;
+  --nm-accent: #a78bfa;
+}
+
+/* Override page background for neumorphic effect */
+body:not(.dark-mode) main,
+body:not(.dark-mode) .container-xxl { background: transparent; }
+body:not(.dark-mode) { background: var(--nm-bg) !important; }
+.dark-mode { background: var(--nm-bg) !important; }
+
 .auth-wrap {
-  min-height: 75vh; display: flex; align-items: center; justify-content: center;
-}
-.auth-card {
-  width: 100%; max-width: 440px;
-  border-radius: 24px; overflow: hidden;
-  box-shadow: 0 20px 60px rgba(108,92,231,0.2); border: none;
-}
-.auth-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white; padding: 2.5rem 2rem 2rem; text-align: center;
-}
-.auth-header .auth-icon {
-  width: 68px; height: 68px;
-  background: rgba(255,255,255,0.2); border-radius: 50%;
+  min-height: 80vh;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.8rem; margin: 0 auto 1rem; backdrop-filter: blur(10px);
+  padding: 2rem 1rem;
 }
-.auth-header h3 { font-weight: 700; margin: 0 0 4px; font-size: 1.5rem; }
-.auth-header p  { opacity: 0.8; font-size: 0.9rem; margin: 0; }
-.auth-body { padding: 2rem; background: var(--bg-card); }
-.dark-mode .auth-body { background: #1a1d2e; }
+
+/* ── Neumorphic card ── */
+.auth-card {
+  width: 100%; max-width: 420px;
+  border-radius: 28px;
+  border: none;
+  background: var(--nm-bg);
+  box-shadow:
+    12px 12px 24px var(--nm-shadow-dark),
+    -12px -12px 24px var(--nm-shadow-light);
+  padding: 0;
+  overflow: visible;
+}
+
+/* ── Header ── */
+.auth-header {
+  text-align: center;
+  padding: 2.5rem 2rem 1.5rem;
+  background: transparent;
+}
+.auth-icon-wrap {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--nm-bg);
+  box-shadow:
+    8px 8px 16px var(--nm-shadow-dark),
+    -8px -8px 16px var(--nm-shadow-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto 1.2rem;
+  transition: all 0.3s;
+}
+.auth-icon-wrap i { color: var(--nm-accent); }
+.auth-header h3 {
+  font-weight: 800; margin: 0 0 4px;
+  font-size: 1.45rem; color: var(--nm-text);
+  letter-spacing: -0.02em;
+}
+.auth-header p { color: var(--nm-text-sub); font-size: 0.88rem; margin: 0; }
+
+/* ── Body ── */
+.auth-body {
+  padding: 1.5rem 2rem 2.5rem;
+  background: transparent;
+}
+
+/* ── Labels ── */
+.form-label { color: var(--nm-text-sub); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+
+/* ── Neumorphic inputs ── */
+.nm-input-group {
+  border-radius: 14px;
+  background: var(--nm-bg);
+  box-shadow:
+    inset 5px 5px 10px var(--nm-shadow-dark),
+    inset -5px -5px 10px var(--nm-shadow-light);
+  display: flex; align-items: center;
+  padding: 0 16px;
+  margin-bottom: 4px;
+}
+.nm-input-group .nm-icon {
+  color: var(--nm-accent); font-size: 1rem; margin-right: 10px; flex-shrink: 0;
+}
+.nm-input-group input {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 14px 0;
+  font-size: 0.95rem;
+  color: var(--nm-text);
+  font-weight: 500;
+}
+.nm-input-group input::placeholder { color: var(--nm-text-sub); opacity: 0.7; }
+.nm-input-group input:-webkit-autofill,
+.nm-input-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: inset 5px 5px 10px var(--nm-shadow-dark), inset -5px -5px 10px var(--nm-shadow-light), 0 0 0 1000px var(--nm-bg) inset;
+  -webkit-text-fill-color: var(--nm-text);
+}
+
+/* ── Neumorphic primary button ── */
 .btn-auth {
-  width: 100%; padding: 0.75rem; border-radius: 50px;
-  font-size: 1rem; font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white; border: none; transition: all 0.28s;
-  box-shadow: 0 6px 20px rgba(108,92,231,0.3);
+  width: 100%; padding: 15px;
+  border-radius: 14px;
+  font-size: 0.95rem; font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: var(--nm-bg);
+  color: var(--nm-accent);
+  box-shadow:
+    6px 6px 14px var(--nm-shadow-dark),
+    -6px -6px 14px var(--nm-shadow-light);
+  transition: all 0.18s;
+  letter-spacing: 0.02em;
+  margin-top: 6px;
+  position: relative;
+  overflow: hidden;
 }
-.btn-auth:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(108,92,231,0.4); color: white; }
+.btn-auth::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(108,92,231,0.12), rgba(118,75,162,0.08));
+  transition: opacity 0.18s;
+}
+.btn-auth:hover {
+  box-shadow:
+    8px 8px 18px var(--nm-shadow-dark),
+    -8px -8px 18px var(--nm-shadow-light);
+  transform: translateY(-1px);
+}
+.btn-auth:active {
+  box-shadow:
+    inset 4px 4px 8px var(--nm-shadow-dark),
+    inset -4px -4px 8px var(--nm-shadow-light);
+  transform: translateY(0);
+}
+
+/* ── Divider & link ── */
 .auth-divider {
-  text-align: center; font-size: 0.88rem; color: #636e72; margin-top: 1.25rem;
+  text-align: center; font-size: 0.85rem;
+  color: var(--nm-text-sub); margin-top: 1.2rem;
 }
-.auth-divider a { color: #6C5CE7; font-weight: 700; text-decoration: none; }
+.auth-divider a { color: var(--nm-accent); font-weight: 700; text-decoration: none; }
 .auth-divider a:hover { text-decoration: underline; }
 
-/* MPIN numpad */
-.pin-dots {
-  display: flex; justify-content: center; gap: 14px; margin-bottom: 22px;
-}
-.pin-dot {
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid rgba(108,92,231,0.4); background: transparent; transition: all 0.2s;
-}
-.pin-dot.filled {
-  background: var(--brand-primary); border-color: var(--brand-primary); transform: scale(1.15);
-}
-.numpad {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px;
-}
-.numpad-btn {
-  aspect-ratio: 1; border-radius: 50%;
-  border: 1.5px solid var(--border-color); background: var(--bg-card);
-  font-size: 1.25rem; font-weight: 600; color: var(--text-primary);
-  cursor: pointer; transition: all 0.15s;
-  display: flex; align-items: center; justify-content: center;
-}
-.numpad-btn:hover { background: rgba(108,92,231,0.1); border-color: var(--brand-primary); color: var(--brand-primary); }
-.numpad-btn:active { transform: scale(0.9); }
-.numpad-btn.backspace { font-size: 1rem; }
-.numpad-btn.empty-btn { visibility: hidden; }
+/* ── User chip ── */
 .mpin-user-chip {
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(108,92,231,0.07); border-radius: 50px;
-  padding: 8px 14px 8px 10px; margin-bottom: 22px; cursor: pointer;
-  border: 1.5px solid rgba(108,92,231,0.15); transition: border 0.2s;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--nm-bg);
+  border-radius: 50px;
+  padding: 10px 16px 10px 10px;
+  margin-bottom: 22px;
+  cursor: pointer;
+  box-shadow:
+    5px 5px 10px var(--nm-shadow-dark),
+    -5px -5px 10px var(--nm-shadow-light);
+  border: none;
+  transition: box-shadow 0.2s;
 }
-.mpin-user-chip:hover { border-color: var(--brand-primary); }
+.mpin-user-chip:hover {
+  box-shadow:
+    7px 7px 14px var(--nm-shadow-dark),
+    -7px -7px 14px var(--nm-shadow-light);
+}
 .mpin-user-chip .avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: var(--gradient-brand); color: white;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 1rem; flex-shrink: 0;
 }
-.mpin-user-chip .uname { font-weight: 600; font-size: 0.92rem; color: var(--text-primary); }
-.mpin-user-chip .edit-hint { font-size: 0.76rem; color: var(--text-secondary); }
-.use-pwd-link {
-  text-align: center; margin-top: 10px;
+.mpin-user-chip .uname { font-weight: 700; font-size: 0.9rem; color: var(--nm-text); }
+.mpin-user-chip .edit-hint { font-size: 0.74rem; color: var(--nm-text-sub); }
+
+/* ── PIN dots ── */
+.pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 22px; }
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--nm-bg);
+  box-shadow: 3px 3px 6px var(--nm-shadow-dark), -3px -3px 6px var(--nm-shadow-light);
+  transition: all 0.2s;
 }
-.use-pwd-link a { font-size: 0.84rem; color: var(--brand-primary); cursor: pointer; text-decoration: none; }
+.pin-dot.filled {
+  background: var(--nm-accent);
+  box-shadow:
+    inset 2px 2px 4px rgba(0,0,0,0.2),
+    0 0 8px rgba(108,92,231,0.4);
+  transform: scale(1.2);
+}
+
+/* ── Numpad ── */
+.numpad { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 14px; }
+.numpad-btn {
+  aspect-ratio: 1; border-radius: 50%;
+  border: none;
+  background: var(--nm-bg);
+  box-shadow:
+    5px 5px 10px var(--nm-shadow-dark),
+    -5px -5px 10px var(--nm-shadow-light);
+  font-size: 1.2rem; font-weight: 700;
+  color: var(--nm-text);
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.numpad-btn:hover { color: var(--nm-accent); }
+.numpad-btn:active {
+  box-shadow:
+    inset 3px 3px 6px var(--nm-shadow-dark),
+    inset -3px -3px 6px var(--nm-shadow-light);
+  transform: scale(0.94);
+}
+.numpad-btn.empty-btn { visibility: hidden; }
+.numpad-btn.backspace { font-size: 0.95rem; }
+
+/* ── Use password link ── */
+.use-pwd-link { text-align: center; margin-top: 10px; }
+.use-pwd-link a { font-size: 0.83rem; color: var(--nm-accent); cursor: pointer; text-decoration: none; font-weight: 600; }
 .use-pwd-link a:hover { text-decoration: underline; }
+
+/* ── Helper text ── */
+.nm-hint { text-align: center; font-size: 0.83rem; color: var(--nm-text-sub); margin-bottom: 14px; }
 </style>
 
 <div class="auth-wrap">
   <div class="auth-card fade-in">
     <div class="auth-header">
-      <div class="auth-icon" id="headerIcon"><i class="bi bi-person-fill"></i></div>
+      <div class="auth-icon-wrap" id="headerIcon">
+        <i class="bi bi-wallet2"></i>
+      </div>
       <h3 id="headerTitle">Welcome Back</h3>
       <p id="headerSub">Sign in to your Money Mate account</p>
     </div>
     <div class="auth-body">
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+          <div class="alert alert-{{ 'danger' if cat == 'danger' else 'success' }} py-2 px-3 mb-3"
+               style="border-radius:12px;font-size:0.85rem;">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
 
       <!-- ── STEP 1: Username ── -->
       <div id="step-username" {% if show_mpin is defined and show_mpin %}style="display:none"{% endif %}>
@@ -100,14 +262,14 @@
           {{ form.hidden_tag() }}
           <div class="mb-4">
             <label class="form-label">Username</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-person"></i></span>
-              <input type="text" id="usernameInput" class="form-control"
+            <div class="nm-input-group">
+              <i class="bi bi-person nm-icon"></i>
+              <input type="text" id="usernameInput"
                      placeholder="Enter your username"
                      value="{{ prefill_username or '' }}"
                      autocomplete="username">
             </div>
-            <small id="usernameError" class="text-danger" style="display:none;"></small>
+            <small id="usernameError" class="text-danger" style="display:none;font-size:0.8rem;padding-left:4px;"></small>
           </div>
           <button type="submit" class="btn-auth" id="continueBtn">
             <span id="continueBtnText"><i class="bi bi-arrow-right-circle me-2"></i>Continue</span>
@@ -127,10 +289,10 @@
           <div class="avatar" id="mpinAvatar">?</div>
           <div>
             <div class="uname" id="mpinUsernameLabel"></div>
-            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change user</div>
+            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.68rem;"></i> Change user</div>
           </div>
         </div>
-        <p style="text-align:center;font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px;">Enter your 6-digit MPIN</p>
+        <p class="nm-hint">Enter your 6-digit MPIN</p>
         <div class="pin-dots">
           {% for i in range(6) %}<div class="pin-dot" id="login-dot-{{ i }}"></div>{% endfor %}
         </div>
@@ -158,7 +320,7 @@
           <div class="avatar" id="pwdAvatar">?</div>
           <div>
             <div class="uname" id="pwdUsernameLabel"></div>
-            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change user</div>
+            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.68rem;"></i> Change user</div>
           </div>
         </div>
         <form id="pwdForm" method="POST" action="{{ url_for('login') }}">
@@ -166,9 +328,9 @@
           <input type="hidden" name="username" id="pwdUsername">
           <div class="mb-4">
             <label class="form-label">Password</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-lock"></i></span>
-              <input type="password" name="password" id="pwdInput" class="form-control"
+            <div class="nm-input-group">
+              <i class="bi bi-lock nm-icon"></i>
+              <input type="password" name="password" id="pwdInput"
                      placeholder="Enter your password" autocomplete="current-password">
             </div>
           </div>
@@ -186,7 +348,6 @@
 let loginPin = '';
 let currentUsername = '';
 
-// On load — if server said show_mpin or show password, switch directly
 (function () {
   {% if show_mpin is defined and show_mpin %}
     const u = "{{ prefill_username or '' }}";
@@ -229,7 +390,7 @@ function showMpinStep(username) {
   document.getElementById('mpinAvatar').textContent = initial;
   document.getElementById('mpinUsernameLabel').textContent = username;
   document.getElementById('mpinUsername').value = username;
-  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-shield-lock-fill"></i>';
+  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-shield-lock-fill" style="color:var(--nm-accent)"></i>';
   document.getElementById('headerTitle').textContent = 'Enter MPIN';
   document.getElementById('headerSub').textContent = 'Your 6-digit quick-login PIN';
   loginPin = ''; updateLoginDots();
@@ -244,21 +405,19 @@ function showPasswordStep(username) {
   document.getElementById('pwdAvatar').textContent = initial;
   document.getElementById('pwdUsernameLabel').textContent = username;
   document.getElementById('pwdUsername').value = username;
-  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-lock-fill"></i>';
+  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-lock-fill" style="color:var(--nm-accent)"></i>';
   document.getElementById('headerTitle').textContent = 'Enter Password';
   document.getElementById('headerSub').textContent = 'Secure access to your account';
   setTimeout(() => { const p = document.getElementById('pwdInput'); if (p) p.focus(); }, 100);
 }
 
-function switchToPassword() {
-  showPasswordStep(currentUsername);
-}
+function switchToPassword() { showPasswordStep(currentUsername); }
 
 function goBackToUsername() {
   document.getElementById('step-mpin').style.display = 'none';
   document.getElementById('step-password').style.display = 'none';
   document.getElementById('step-username').style.display = 'block';
-  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-person-fill"></i>';
+  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-wallet2" style="color:var(--nm-accent)"></i>';
   document.getElementById('headerTitle').textContent = 'Welcome Back';
   document.getElementById('headerSub').textContent = 'Sign in to your Money Mate account';
   document.getElementById('continueBtnText').style.display = 'inline';
