@@ -1,0 +1,31 @@
+{
+  "name": "Money Mate",
+  "short_name": "Money Mate",
+  "description": "Smart personal finance management — track income, expenses, savings goals and subscriptions.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#6C5CE7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icons/icon-48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["finance", "productivity"]
+}

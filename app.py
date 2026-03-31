@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, send_from_directory
 from flask_login import (
     LoginManager,
     login_user,
@@ -828,6 +828,18 @@ def remove_expired_subscription(id):
     db.session.commit()
     flash("Subscription removed.", "success")
     return redirect(url_for("subscriptions"))
+
+
+@app.route("/manifest.json")
+def pwa_manifest():
+    return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
+
+
+@app.route("/sw.js")
+def pwa_sw():
+    response = send_from_directory("static", "sw.js", mimetype="application/javascript")
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
 
 
 @app.route("/")
