@@ -19,11 +19,28 @@
 </head>
 <body>
 
+{% set _page_titles = {
+  'dashboard': 'Dashboard',
+  'add_income': 'Income',
+  'add_expense': 'Expenses',
+  'subscriptions': 'Subscriptions',
+  'goals': 'Goals',
+  'analysis': 'Analysis',
+  'email_import': 'Import',
+  'profile': 'Profile',
+  'login': 'Login',
+  'register': 'Register',
+} %}
 <nav class="creative-navbar">
   <div class="nav-inner">
     <a class="brand-logo" href="{{ url_for('index') }}">
       <span class="brand-icon"><i class="bi bi-wallet2"></i></span>
     </a>
+
+    <!-- Mobile page title (centred, visible only on mobile) -->
+    {% if request.endpoint in _page_titles %}
+    <span class="mobile-page-title">{{ _page_titles[request.endpoint] }}</span>
+    {% endif %}
 
     <!-- Desktop nav links -->
     <ul class="desktop-nav-links">
