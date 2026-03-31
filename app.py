@@ -1029,18 +1029,23 @@ def dashboard():
         for src, amt in source_breakdown.items()
     }
 
-    # Recent incomes
+    # Recent incomes — today and yesterday only
+    yesterday_start = datetime(now.year, now.month, now.day) - timedelta(days=1)
     recent_incomes = (
-        Income.query.filter_by(user_id=current_user.id)
+        Income.query.filter(
+            Income.user_id == current_user.id,
+            Income.date_received >= yesterday_start,
+        )
         .order_by(Income.date_received.desc())
-        .limit(10)
         .all()
     )
-    # Recent expenses
+    # Recent expenses — today and yesterday only
     recent_expenses = (
-        Expense.query.filter_by(user_id=current_user.id)
+        Expense.query.filter(
+            Expense.user_id == current_user.id,
+            Expense.date >= yesterday_start,
+        )
         .order_by(Expense.date.desc())
-        .limit(10)
         .all()
     )
 

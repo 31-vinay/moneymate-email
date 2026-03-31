@@ -387,7 +387,7 @@
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-center text-muted py-3">No income yet. <a href="{{ url_for('add_income') }}">Add one</a></td></tr>
+            <tr><td colspan="4" class="text-center text-muted py-3">No income recorded today or yesterday.</td></tr>
             {% endfor %}
             </tbody>
           </table>
@@ -426,7 +426,7 @@
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-center text-muted py-3">No expenses yet. <a href="{{ url_for('add_expense') }}">Add one</a></td></tr>
+            <tr><td colspan="4" class="text-center text-muted py-3">No expenses recorded today or yesterday.</td></tr>
             {% endfor %}
             </tbody>
           </table>
