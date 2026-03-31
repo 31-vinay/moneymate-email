@@ -928,7 +928,7 @@ def setup_mpin():
             current_user.mpin = new_pin
             db.session.commit()
             flash("MPIN set successfully!", "success")
-            return redirect(url_for("profile"))
+            return redirect(url_for("settings"))
     return render_template("mpin_setup.html", mode="setup")
 
 
@@ -949,7 +949,7 @@ def change_mpin():
             current_user.mpin = new_pin
             db.session.commit()
             flash("MPIN changed successfully!", "success")
-            return redirect(url_for("profile"))
+            return redirect(url_for("settings"))
     return render_template("mpin_setup.html", mode="change")
 
 
@@ -963,13 +963,38 @@ def remove_mpin():
         current_user.mpin = None
         db.session.commit()
         flash("MPIN removed successfully.", "success")
-    return redirect(url_for("profile"))
+    return redirect(url_for("settings"))
 
 
 @app.route("/profile")
 @login_required
 def profile():
-    return render_template("profile.html")
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings")
+@login_required
+def settings():
+    return render_template("settings.html")
+
+
+@app.route("/change-password", methods=["POST"])
+@login_required
+def change_password():
+    current_password = request.form.get("current_password", "").strip()
+    new_password = request.form.get("new_password", "").strip()
+    confirm_password = request.form.get("confirm_password", "").strip()
+    if current_user.password != current_password:
+        flash("Current password is incorrect.", "danger")
+    elif len(new_password) < 4:
+        flash("New password must be at least 4 characters.", "danger")
+    elif new_password != confirm_password:
+        flash("New passwords do not match.", "danger")
+    else:
+        current_user.password = new_password
+        db.session.commit()
+        flash("Password updated successfully!", "success")
+    return redirect(url_for("settings"))
 
 
 @app.route("/logout")

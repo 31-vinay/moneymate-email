@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.settings-wrap { max-width: 720px; margin: 0 auto; }
+.settings-card {
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(108,92,231,0.07);
+}
+.settings-card-header {
+  background: var(--gradient-brand);
+  color: white;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.settings-card-header .card-icon {
+  width: 42px; height: 42px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.settings-card-header h5 { font-weight: 700; margin: 0; font-size: 1rem; }
+.settings-card-header p  { margin: 0; opacity: 0.82; font-size: 0.8rem; }
+.settings-card-body { padding: 20px 24px; }
+.info-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  gap: 12px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-secondary); font-weight: 500; white-space: nowrap; }
+.info-value { font-weight: 600; color: var(--text-primary); text-align: right; }
+.mpin-status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 50px; font-size: 0.78rem; font-weight: 700;
+}
+.mpin-enabled  { background: rgba(0,184,148,0.12); color: #00b894; }
+.mpin-disabled { background: rgba(214,48,49,0.1);  color: #d63031; }
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 16px 0;
+}
+</style>
+
+<div class="settings-wrap">
+  <div class="page-header mb-4">
+    <h2 class="page-title"><i class="bi bi-gear-fill me-2"></i>Settings</h2>
+    <p class="text-muted mb-0">Manage your account, appearance, and security preferences</p>
+  </div>
+
+  <!-- ── Account ── -->
+  <div class="settings-card">
+    <div class="settings-card-header">
+      <div class="card-icon"><i class="bi bi-person-fill"></i></div>
+      <div>
+        <h5>Account</h5>
+        <p>Your profile details</p>
+      </div>
+    </div>
+    <div class="settings-card-body">
+      <div class="info-row">
+        <span class="info-label"><i class="bi bi-person me-2"></i>Username</span>
+        <span class="info-value">{{ current_user.username }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="bi bi-envelope me-2"></i>Email</span>
+        <span class="info-value">{{ current_user.email }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Appearance ── -->
+  <div class="settings-card">
+    <div class="settings-card-header">
+      <div class="card-icon"><i class="bi bi-palette-fill"></i></div>
+      <div>
+        <h5>Appearance</h5>
+        <p>Customise how Money Mate looks</p>
+      </div>
+    </div>
+    <div class="settings-card-body">
+      <div class="info-row">
+        <span class="info-label"><i class="bi bi-moon-stars me-2"></i>Dark Mode</span>
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="darkModeToggle" role="switch"
+                 style="width:2.5em;height:1.4em;cursor:pointer;"
+                 onchange="toggleDark()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Security ── -->
+  <div class="settings-card">
+    <div class="settings-card-header">
+      <div class="card-icon"><i class="bi bi-shield-lock-fill"></i></div>
+      <div>
+        <h5>Security</h5>
+        <p>Password and MPIN management</p>
+      </div>
+    </div>
+    <div class="settings-card-body">
+
+      <!-- Change Password -->
+      <p class="fw-semibold mb-2" style="font-size:0.9rem;color:var(--text-primary);">
+        <i class="bi bi-lock me-2" style="color:var(--brand-primary);"></i>Change Password
+      </p>
+      <form method="POST" action="{{ url_for('change_password') }}" class="mb-1">
+        <div class="row g-2">
+          <div class="col-12 col-sm-4">
+            <input type="password" name="current_password" class="form-control form-control-sm"
+                   placeholder="Current password" required>
+          </div>
+          <div class="col-12 col-sm-4">
+            <input type="password" name="new_password" class="form-control form-control-sm"
+                   placeholder="New password" required minlength="4">
+          </div>
+          <div class="col-12 col-sm-4">
+            <input type="password" name="confirm_password" class="form-control form-control-sm"
+                   placeholder="Confirm new password" required minlength="4">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 mt-2">
+          <i class="bi bi-check-circle me-1"></i>Update Password
+        </button>
+      </form>
+
+      <hr class="settings-divider">
+
+      <!-- MPIN -->
+      <p class="fw-semibold mb-2" style="font-size:0.9rem;color:var(--text-primary);">
+        <i class="bi bi-key me-2" style="color:var(--brand-primary);"></i>MPIN — Quick Login
+        <span class="ms-2">
+          {% if current_user.mpin %}
+          <span class="mpin-status-badge mpin-enabled"><i class="bi bi-check-circle-fill"></i> Enabled</span>
+          {% else %}
+          <span class="mpin-status-badge mpin-disabled"><i class="bi bi-x-circle-fill"></i> Not Set</span>
+          {% endif %}
+        </span>
+      </p>
+      <p class="text-muted mb-3" style="font-size:0.82rem;">A 6-digit PIN for faster, secure access without typing your full password.</p>
+      {% if not current_user.mpin %}
+      <a href="{{ url_for('setup_mpin') }}" class="btn btn-primary rounded-pill px-4 btn-sm">
+        <i class="bi bi-plus-circle me-2"></i>Set Up MPIN
+      </a>
+      {% else %}
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('change_mpin') }}" class="btn btn-outline-primary rounded-pill px-4 btn-sm">
+          <i class="bi bi-pencil me-2"></i>Change MPIN
+        </a>
+        <button class="btn btn-outline-danger rounded-pill px-4 btn-sm"
+                data-bs-toggle="modal" data-bs-target="#removeMpinModal">
+          <i class="bi bi-trash me-2"></i>Remove MPIN
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Email Import ── -->
+  <div class="settings-card">
+    <div class="settings-card-header">
+      <div class="card-icon"><i class="bi bi-envelope-arrow-down"></i></div>
+      <div>
+        <h5>Email Import</h5>
+        <p>Auto-detect transactions from bank &amp; payment emails</p>
+      </div>
+    </div>
+    <div class="settings-card-body">
+      <p class="text-muted mb-3" style="font-size:0.85rem;">Connect your inbox to automatically scan for transaction emails and import them as expenses or income.</p>
+      <a href="{{ url_for('email_import') }}" class="btn btn-primary rounded-pill px-4 btn-sm">
+        <i class="bi bi-envelope-arrow-down me-2"></i>Open Email Import
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Danger Zone ── -->
+  <div class="settings-card" style="border-color:rgba(214,48,49,0.3);">
+    <div class="settings-card-header" style="background:linear-gradient(135deg,#c0392b,#e74c3c);">
+      <div class="card-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div>
+        <h5>Danger Zone</h5>
+        <p>Irreversible account actions</p>
+      </div>
+    </div>
+    <div class="settings-card-body">
+      <p class="text-muted mb-3" style="font-size:0.85rem;">Logging out will end your current session. You can log back in any time.</p>
+      <a href="{{ url_for('logout') }}" class="btn btn-danger rounded-pill px-4 btn-sm">
+        <i class="bi bi-box-arrow-right me-2"></i>Log Out
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Remove MPIN Modal -->
+{% if current_user.mpin %}
+<div class="modal fade" id="removeMpinModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:20px;border:none;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-shield-x text-danger me-2"></i>Remove MPIN</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('remove_mpin') }}">
+        <div class="modal-body pt-2">
+          <p class="text-muted" style="font-size:0.9rem;">Enter your account password to confirm removing the MPIN.</p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Account Password</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-lock"></i></span>
+              <input type="password" name="current_password" class="form-control" placeholder="Enter your password" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger rounded-pill px-4">
+            <i class="bi bi-trash me-2"></i>Remove MPIN
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+// Sync the dark mode toggle with current state on page load
+(function() {
+  var toggle = document.getElementById('darkModeToggle');
+  if (toggle) {
+    toggle.checked = document.body.classList.contains('dark-mode');
+  }
+})();
+</script>
+
+{% endblock %}
