@@ -1799,6 +1799,9 @@ def analysis():
     essential = sum(e.amount for e in expenses_month if e.is_essential)
     non_essential = total_spent - essential
 
+    days_passed = (now - month_start).days + 1
+    burn_rate = total_spent / days_passed if days_passed > 0 else 0
+
     return render_template(
         "analysis.html",
         chart_dist=chart_dist,
@@ -1810,6 +1813,7 @@ def analysis():
         total_spent=total_spent,
         essential=essential,
         non_essential=non_essential,
+        burn_rate=burn_rate,
         now=now,
     )
 
