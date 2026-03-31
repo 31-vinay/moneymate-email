@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.ei-wrap { max-width: 860px; margin: 0 auto; }
+
+/* Step cards */
+.ei-card {
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(108,92,231,0.07);
+  transition: opacity .3s;
+}
+.ei-card-header {
+  background: var(--gradient-brand);
+  color: #fff;
+  padding: 18px 26px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ei-card-header .card-icon {
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.ei-card-header h5 { font-weight: 700; margin: 0; font-size: 1rem; }
+.ei-card-header p  { margin: 0; opacity: .82; font-size: 0.8rem; }
+.ei-card-body { padding: 22px 26px; }
+
+/* Provider pills */
+.provider-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.provider-pill {
+  border: 2px solid var(--border-color);
+  border-radius: 50px;
+  padding: 7px 18px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: all .2s;
+  display: flex; align-items: center; gap: 7px;
+}
+.provider-pill:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+.provider-pill.active { border-color: var(--brand-primary); background: rgba(108,92,231,0.1); color: var(--brand-primary); }
+
+/* Step indicator */
+.step-row { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+.step-badge {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.step-label { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); }
+
+/* Status badge */
+.conn-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;
+}
+.conn-badge.connected    { background: rgba(0,184,148,0.12); color: #00b894; }
+.conn-badge.disconnected { background: rgba(214,48,49,0.1);  color: #d63031; }
+
+/* Results table */
+.txn-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.87rem; }
+.txn-table th {
+  background: rgba(108,92,231,0.08);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border-color);
+}
+.txn-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.txn-table tr:last-child td { border-bottom: none; }
+.txn-table tr:hover td { background: rgba(108,92,231,0.03); }
+
+.badge-income  { background: rgba(0,184,148,0.12); color: #00b894; }
+.badge-expense { background: rgba(214,48,49,0.1);  color: #d63031; }
+.type-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 50px; font-size: 0.76rem; font-weight: 700;
+}
+
+.select-all-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+
+/* Loading spinner */
+.scan-spinner { display: none; }
+.scan-spinner.active { display: inline-block; }
+
+/* Security notice */
+.security-note {
+  background: rgba(108,92,231,0.07);
+  border-left: 4px solid var(--brand-primary);
+  border-radius: 0 12px 12px 0;
+  padding: 12px 16px;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+.security-note strong { color: var(--text-primary); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.empty-state i { font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 10px; }
+</style>
+
+<div class="ei-wrap">
+
+  <div class="page-header mb-4">
+    <h2 class="page-title"><i class="bi bi-envelope-arrow-down me-2"></i>Email Import</h2>
+    <p class="text-muted mb-0">Auto-detect transactions from your inbox and import them directly into Money Mate.</p>
+  </div>
+
+  <!-- Step 1: Connect -->
+  <div class="ei-card" id="card-connect">
+    <div class="ei-card-header">
+      <div class="card-icon"><i class="bi bi-plug-fill"></i></div>
+      <div>
+        <h5>Step 1 — Connect Your Email</h5>
+        <p>Your credentials are only used for this session and are never stored in the database.</p>
+      </div>
+    </div>
+    <div class="ei-card-body">
+
+      {% if imap_connected %}
+      <!-- Already connected -->
+      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <span class="conn-badge connected"><i class="bi bi-check-circle-fill"></i> Connected</span>
+        <span class="text-muted" style="font-size:0.87rem;">Your email account is linked for this session.</span>
+        <button class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-auto" id="btnDisconnect">
+          <i class="bi bi-plug me-1"></i>Disconnect
+        </button>
+      </div>
+      {% else %}
+      <!-- Connect form -->
+      <div class="security-note">
+        <strong><i class="bi bi-shield-lock me-1"></i>Security note:</strong>
+        Your password is sent securely over SSL and only stored in your browser session — it is erased when you log out.
+        For Gmail/Outlook we strongly recommend using an <strong>App Password</strong> instead of your main password.
+      </div>
+
+      <div class="step-row"><div class="step-badge">1</div><div class="step-label">Choose your email provider</div></div>
+      <div class="provider-pills" id="providerPills">
+        <div class="provider-pill active" data-host="imap.gmail.com" data-port="993" onclick="selectProvider(this)">
+          <i class="bi bi-google"></i> Gmail
+        </div>
+        <div class="provider-pill" data-host="imap-mail.outlook.com" data-port="993" onclick="selectProvider(this)">
+          <i class="bi bi-microsoft"></i> Outlook / Hotmail
+        </div>
+        <div class="provider-pill" data-host="imap.mail.yahoo.com" data-port="993" onclick="selectProvider(this)">
+          <i class="bi bi-yahoo"></i> Yahoo Mail
+        </div>
+        <div class="provider-pill" data-host="imap.mail.me.com" data-port="993" onclick="selectProvider(this)">
+          <i class="bi bi-apple"></i> iCloud Mail
+        </div>
+        <div class="provider-pill" data-host="" data-port="993" onclick="selectProvider(this, true)">
+          <i class="bi bi-server"></i> Custom / Other
+        </div>
+      </div>
+
+      <div id="customHostRow" class="row g-3 mb-3" style="display:none!important;">
+        <div class="col-sm-8">
+          <label class="form-label fw-semibold small">IMAP Server</label>
+          <input type="text" id="imapHost" class="form-control" placeholder="e.g. imap.yourprovider.com">
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold small">Port</label>
+          <input type="number" id="imapPort" class="form-control" value="993">
+        </div>
+      </div>
+
+      <div class="step-row mt-3"><div class="step-badge">2</div><div class="step-label">Enter your credentials</div></div>
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold small">Email Address</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input type="email" id="imapEmail" class="form-control" placeholder="you@gmail.com">
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold small">
+            App Password
+            <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="ms-1" style="font-size:0.78rem;">(What's this?)</a>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-key"></i></span>
+            <input type="password" id="imapPassword" class="form-control" placeholder="App password or email password">
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()"><i class="bi bi-eye" id="eyeIcon"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div id="connectError" class="alert alert-danger d-none"></div>
+
+      <button class="btn btn-primary rounded-pill px-4" id="btnConnect" onclick="connectEmail()">
+        <i class="bi bi-plug me-2"></i>Connect &amp; Verify
+        <span class="spinner-border spinner-border-sm ms-2 d-none" id="connectSpinner"></span>
+      </button>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Step 2: Scan -->
+  <div class="ei-card {% if not imap_connected %}opacity-50{% endif %}" id="card-scan">
+    <div class="ei-card-header">
+      <div class="card-icon"><i class="bi bi-search-heart"></i></div>
+      <div>
+        <h5>Step 2 — Scan for Transactions</h5>
+        <p>Money Mate scans your inbox for bank alerts, receipts, and payment notifications.</p>
+      </div>
+    </div>
+    <div class="ei-card-body">
+      <div class="row g-3 align-items-end mb-4">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold small">Look back</label>
+          <select class="form-select" id="scanDays">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="60">Last 60 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+        <div class="col-sm-auto">
+          <button class="btn btn-primary rounded-pill px-4" id="btnScan" onclick="scanEmails()" {% if not imap_connected %}disabled{% endif %}>
+            <i class="bi bi-search me-2"></i>Scan Emails
+            <span class="spinner-border spinner-border-sm ms-2 d-none" id="scanSpinner"></span>
+          </button>
+        </div>
+      </div>
+      <div id="scanError" class="alert alert-danger d-none"></div>
+      <div id="scanInfo"  class="alert alert-info  d-none"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Review & Import -->
+  <div class="ei-card d-none" id="card-results">
+    <div class="ei-card-header">
+      <div class="card-icon"><i class="bi bi-check2-square"></i></div>
+      <div>
+        <h5>Step 3 — Review &amp; Import</h5>
+        <p>Select the transactions you want to add to Money Mate, then click Import.</p>
+      </div>
+    </div>
+    <div class="ei-card-body">
+
+      <div class="select-all-row">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleAll(this)">
+          <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+        </div>
+        <span class="text-muted small ms-auto" id="selectedCount">0 selected</span>
+        <button class="btn btn-success rounded-pill px-4" id="btnImport" onclick="importSelected()" disabled>
+          <i class="bi bi-cloud-arrow-up me-2"></i>Import Selected
+          <span class="spinner-border spinner-border-sm ms-2 d-none" id="importSpinner"></span>
+        </button>
+      </div>
+
+      <div id="importSuccess" class="alert alert-success d-none"></div>
+      <div id="importError"   class="alert alert-danger  d-none"></div>
+
+      <div class="table-responsive">
+        <table class="txn-table" id="txnTable">
+          <thead>
+            <tr>
+              <th style="width:36px;"></th>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="txnBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyResults" class="empty-state d-none">
+        <i class="bi bi-inbox"></i>
+        <p class="fw-semibold">No financial emails found in this period.</p>
+        <p class="small">Try increasing the look-back window or check that your inbox has transaction emails.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedHost = 'imap.gmail.com';
+let selectedPort = 993;
+let parsedTransactions = [];
+
+// Provider selection
+function selectProvider(el, isCustom) {
+  document.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  selectedHost = el.dataset.host;
+  selectedPort = parseInt(el.dataset.port) || 993;
+  const customRow = document.getElementById('customHostRow');
+  if (isCustom) {
+    customRow.style.setProperty('display', '', 'important');
+    selectedHost = '';
+  } else {
+    customRow.style.setProperty('display', 'none', 'important');
+  }
+}
+
+function togglePwd() {
+  const inp = document.getElementById('imapPassword');
+  const icon = document.getElementById('eyeIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text'; icon.className = 'bi bi-eye-slash';
+  } else {
+    inp.type = 'password'; icon.className = 'bi bi-eye';
+  }
+}
+
+// Connect
+async function connectEmail() {
+  const host  = document.getElementById('imapHost')?.value || selectedHost;
+  const port  = document.getElementById('imapPort')?.value || selectedPort;
+  const email = document.getElementById('imapEmail').value.trim();
+  const pass  = document.getElementById('imapPassword').value;
+  const errEl = document.getElementById('connectError');
+  const spin  = document.getElementById('connectSpinner');
+  const btn   = document.getElementById('btnConnect');
+
+  errEl.classList.add('d-none');
+  spin.classList.remove('d-none');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/email-import/connect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({host, port, email, password: pass})
+    });
+    const data = await res.json();
+    if (data.success) {
+      location.reload();
+    } else {
+      errEl.textContent = data.message;
+      errEl.classList.remove('d-none');
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error — please try again.';
+    errEl.classList.remove('d-none');
+  }
+  spin.classList.add('d-none');
+  btn.disabled = false;
+}
+
+// Disconnect
+document.getElementById('btnDisconnect')?.addEventListener('click', async () => {
+  await fetch('/email-import/disconnect', {method: 'POST'});
+  location.reload();
+});
+
+// Scan
+async function scanEmails() {
+  const days  = document.getElementById('scanDays').value;
+  const errEl = document.getElementById('scanError');
+  const infoEl= document.getElementById('scanInfo');
+  const spin  = document.getElementById('scanSpinner');
+  const btn   = document.getElementById('btnScan');
+  const card  = document.getElementById('card-results');
+
+  errEl.classList.add('d-none');
+  infoEl.textContent = 'Scanning your inbox… this may take a moment.';
+  infoEl.classList.remove('d-none');
+  spin.classList.remove('d-none');
+  btn.disabled = true;
+  card.classList.add('d-none');
+
+  try {
+    const res = await fetch('/email-import/scan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({days: parseInt(days)})
+    });
+    const data = await res.json();
+    infoEl.classList.add('d-none');
+
+    if (data.success) {
+      parsedTransactions = data.transactions;
+      renderResults(parsedTransactions);
+      card.classList.remove('d-none');
+    } else {
+      errEl.textContent = data.message;
+      errEl.classList.remove('d-none');
+    }
+  } catch(e) {
+    infoEl.classList.add('d-none');
+    errEl.textContent = 'Network error during scan.';
+    errEl.classList.remove('d-none');
+  }
+  spin.classList.add('d-none');
+  btn.disabled = false;
+}
+
+// Render results table
+function renderResults(txns) {
+  const tbody  = document.getElementById('txnBody');
+  const empty  = document.getElementById('emptyResults');
+  const selCount = document.getElementById('selectedCount');
+  tbody.innerHTML = '';
+  selCount.textContent = '0 selected';
+  document.getElementById('btnImport').disabled = true;
+  document.getElementById('selectAll').checked = false;
+
+  if (!txns.length) {
+    empty.classList.remove('d-none');
+    return;
+  }
+  empty.classList.add('d-none');
+
+  txns.forEach((t, i) => {
+    const isIncome = t.type === 'income';
+    const typeBadge = isIncome
+      ? `<span class="type-badge badge-income"><i class="bi bi-arrow-down-circle-fill"></i> Income</span>`
+      : `<span class="type-badge badge-expense"><i class="bi bi-arrow-up-circle-fill"></i> Expense</span>`;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><input class="form-check-input txn-check" type="checkbox" data-idx="${i}" onchange="updateCount()"></td>
+      <td style="white-space:nowrap;">${t.date}</td>
+      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(t.subject)}">${escHtml(t.description || t.subject)}</td>
+      <td>${typeBadge}</td>
+      <td class="fw-bold" style="white-space:nowrap;">₹${parseFloat(t.amount).toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleAll(cb) {
+  document.querySelectorAll('.txn-check').forEach(c => c.checked = cb.checked);
+  updateCount();
+}
+
+function updateCount() {
+  const checked = document.querySelectorAll('.txn-check:checked').length;
+  document.getElementById('selectedCount').textContent = `${checked} selected`;
+  document.getElementById('btnImport').disabled = checked === 0;
+  const all = document.querySelectorAll('.txn-check').length;
+  document.getElementById('selectAll').checked = checked === all && all > 0;
+}
+
+// Import
+async function importSelected() {
+  const successEl = document.getElementById('importSuccess');
+  const errEl     = document.getElementById('importError');
+  const spin      = document.getElementById('importSpinner');
+  const btn       = document.getElementById('btnImport');
+
+  successEl.classList.add('d-none');
+  errEl.classList.add('d-none');
+  spin.classList.remove('d-none');
+  btn.disabled = true;
+
+  const selected = [];
+  document.querySelectorAll('.txn-check:checked').forEach(cb => {
+    selected.push(parsedTransactions[parseInt(cb.dataset.idx)]);
+  });
+
+  try {
+    const res = await fetch('/email-import/import', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({transactions: selected})
+    });
+    const data = await res.json();
+    if (data.success) {
+      successEl.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i><strong>${data.imported} transaction${data.imported !== 1 ? 's' : ''} imported!</strong> Go to <a href="/add_expense" class="alert-link">Expenses</a> to categorise them.`;
+      successEl.classList.remove('d-none');
+      // Remove imported rows
+      document.querySelectorAll('.txn-check:checked').forEach(cb => cb.closest('tr').remove());
+      parsedTransactions = parsedTransactions.filter((_, i) => !selected.includes(parsedTransactions[i]));
+      updateCount();
+    } else {
+      errEl.textContent = data.message || 'Import failed.';
+      errEl.classList.remove('d-none');
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error during import.';
+    errEl.classList.remove('d-none');
+  }
+  spin.classList.add('d-none');
+  btn.disabled = false;
+}
+
+// Allow pressing Enter in form fields to connect
+['imapEmail','imapPassword','imapHost','imapPort'].forEach(id => {
+  document.getElementById(id)?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') connectEmail();
+  });
+});
+</script>
+{% endblock %}

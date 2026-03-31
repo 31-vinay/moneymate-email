@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4 fade-in flex-wrap gap-3">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--text-primary);">
+      <i class="bi bi-bar-chart-line me-2" style="color:var(--brand-primary);"></i>Analysis
+    </h4>
+    <p class="text-muted mb-0" style="font-size:0.88rem;">Charts and insights for the past 6 months · Generated {{ now.strftime('%d %b %Y %I:%M %p') }}</p>
+  </div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-sm rounded-pill px-4">
+    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+  </a>
+</div>
+
+{% if not chart_dist and not chart_trend and not chart_inc_exp and not chart_cats %}
+<div class="text-center py-5 fade-in">
+  <div style="font-size:4rem;opacity:0.25;margin-bottom:1rem;"><i class="bi bi-bar-chart-line"></i></div>
+  <h5 class="fw-bold mb-2">No data yet</h5>
+  <p class="text-muted mb-4" style="max-width:400px;margin:0 auto 1.5rem;">
+    Add some income and expenses first, then come back here to see your charts and insights.
+  </p>
+  <div class="d-flex justify-content-center gap-3 flex-wrap">
+    <a href="{{ url_for('add_income') }}" class="btn btn-success rounded-pill px-4">
+      <i class="bi bi-plus me-1"></i>Add Income
+    </a>
+    <a href="{{ url_for('add_expense') }}" class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-plus me-1"></i>Add Expense
+    </a>
+  </div>
+</div>
+{% else %}
+
+<!-- Summary row -->
+<div class="row g-3 mb-4 fade-in fade-in-delay-1">
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-income">
+      <div class="stat-label">This Month Income</div>
+      <div class="stat-value">₹{{ "%.0f"|format(total_income) }}</div>
+      <div class="stat-bg-icon"><i class="bi bi-cash-stack"></i></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-expense">
+      <div class="stat-label">This Month Spent</div>
+      <div class="stat-value">₹{{ "%.0f"|format(total_spent) }}</div>
+      <div class="stat-bg-icon"><i class="bi bi-wallet2"></i></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-balance">
+      <div class="stat-label">Needs (Essential)</div>
+      <div class="stat-value">₹{{ "%.0f"|format(essential) }}</div>
+      <div class="stat-bg-icon"><i class="bi bi-house-heart"></i></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-burn">
+      <div class="stat-label">Wants (Non-Essential)</div>
+      <div class="stat-value">₹{{ "%.0f"|format(non_essential) }}</div>
+      <div class="stat-bg-icon"><i class="bi bi-star"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 1: Expense Distribution + Category Breakdown -->
+<div class="row g-3 mb-4 fade-in fade-in-delay-1">
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-pie-chart me-2"></i>Expense Distribution
+        <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">This month</span>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
+        {% if chart_dist %}
+        <img src="data:image/png;base64,{{ chart_dist }}" alt="Expense Distribution"
+             style="max-width:100%;max-height:320px;object-fit:contain;">
+        {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-pie-chart" style="font-size:3rem;opacity:0.25;"></i>
+          <p class="mt-2 mb-0">No expense data for this month.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-horizontal me-2"></i>Category Breakdown
+        <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">This month · Top 8</span>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
+        {% if chart_cats %}
+        <img src="data:image/png;base64,{{ chart_cats }}" alt="Category Breakdown"
+             style="max-width:100%;max-height:380px;object-fit:contain;">
+        {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-bar-chart-horizontal" style="font-size:3rem;opacity:0.25;"></i>
+          <p class="mt-2 mb-0">No expense categories to display.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Monthly Spending Trend -->
+<div class="card mb-4 fade-in fade-in-delay-2">
+  <div class="card-header">
+    <i class="bi bi-graph-up me-2"></i>Monthly Spending Trend
+    <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">Last 6 months</span>
+  </div>
+  <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
+    {% if chart_trend %}
+    <img src="data:image/png;base64,{{ chart_trend }}" alt="Monthly Spending Trend"
+         style="max-width:100%;max-height:320px;object-fit:contain;">
+    {% else %}
+    <div class="text-center text-muted py-4">
+      <i class="bi bi-graph-up" style="font-size:3rem;opacity:0.25;"></i>
+      <p class="mt-2 mb-0">Not enough data for a trend yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 3: Income vs Expense -->
+<div class="card mb-4 fade-in fade-in-delay-3">
+  <div class="card-header">
+    <i class="bi bi-bar-chart-line me-2"></i>Income vs Expense
+    <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">Last 6 months</span>
+  </div>
+  <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
+    {% if chart_inc_exp %}
+    <img src="data:image/png;base64,{{ chart_inc_exp }}" alt="Income vs Expense"
+         style="max-width:100%;max-height:320px;object-fit:contain;">
+    {% else %}
+    <div class="text-center text-muted py-4">
+      <i class="bi bi-bar-chart-line" style="font-size:3rem;opacity:0.25;"></i>
+      <p class="mt-2 mb-0">No income or expense data to compare.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Category table -->
+{% if categories %}
+<div class="card mb-4 fade-in fade-in-delay-3">
+  <div class="card-header"><i class="bi bi-table me-2"></i>Category Summary — This Month</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="text-end">Amount</th>
+            <th style="width:40%">Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set total_cat = categories.values()|sum %}
+          {% for cat, amt in categories.items()|sort(attribute='1', reverse=True) %}
+          <tr>
+            <td>
+              {% if 'rent' in cat.lower() or 'mortgage' in cat.lower() %}🏠
+              {% elif 'food' in cat.lower() or 'groceries' in cat.lower() %}🍔
+              {% elif 'transport' in cat.lower() or 'fuel' in cat.lower() %}🚗
+              {% elif 'electricity' in cat.lower() or 'water' in cat.lower() %}⚡
+              {% elif 'health' in cat.lower() or 'medical' in cat.lower() %}🏥
+              {% elif 'education' in cat.lower() %}📚
+              {% elif 'insurance' in cat.lower() %}🛡️
+              {% elif 'entertainment' in cat.lower() %}🎮
+              {% elif 'travel' in cat.lower() %}✈️
+              {% else %}📌{% endif %}
+              {{ cat }}
+            </td>
+            <td class="text-end fw-semibold">₹{{ "%.0f"|format(amt) }}</td>
+            <td>
+              {% set pct = (amt / total_cat * 100) if total_cat else 0 %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:8px;">
+                  <div class="progress-bar" style="width:{{ pct }}%;background:var(--brand-primary);"></div>
+                </div>
+                <span style="font-size:0.8rem;color:var(--text-muted);min-width:38px;">{{ "%.1f"|format(pct) }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}

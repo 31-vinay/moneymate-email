@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row g-4">
+
+  <!-- Add / Edit Form -->
+  <div class="col-lg-5">
+    <div class="card fade-in">
+      <div class="card-header">
+        <i class="bi bi-{% if edit %}pencil{% else %}cash-coin{% endif %}"></i>
+        {% if edit %}Edit Income{% else %}Add Income{% endif %}
+      </div>
+      <div class="card-body p-4">
+        <form method="POST">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.source.label(class="form-label") }}
+            {{ form.source(class="form-select") }}
+          </div>
+          <div class="mb-3">
+            {{ form.amount.label(class="form-label") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-currency-rupee"></i></span>
+              {{ form.amount(class="form-control", placeholder="0.00", step="0.01") }}
+            </div>
+            {% if form.amount.errors %}
+              {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            {{ form.date_received.label(class="form-label") }}
+            {{ form.date_received(class="form-control") }}
+            <small class="text-muted">Leave blank to use today's date</small>
+          </div>
+          <div class="mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control", placeholder="Optional note...") }}
+          </div>
+          <div class="mb-4">
+            <div class="form-check p-3 rounded" style="background:rgba(108,92,231,0.05);border:1.5px solid var(--border-color);">
+              {{ form.is_recurring(class="form-check-input") }}
+              {{ form.is_recurring.label(class="form-check-label fw-semibold") }}
+              <div><small class="text-muted">Mark if this is a monthly salary or recurring income — it won't be cleared on monthly reset</small></div>
+            </div>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-success btn-lg">
+              <i class="bi bi-check-circle me-2"></i>
+              {% if edit %}Update Income{% else %}Add Income{% endif %}
+            </button>
+            <a href="{{ url_for('add_income') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Income List -->
+  <div class="col-lg-7 fade-in fade-in-delay-1">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-list-ul"></i> All Income
+        <span class="badge ms-auto" style="background:rgba(255,255,255,0.25);">{{ incomes|length }} entries</span>
+      </div>
+      <div class="card-body p-0">
+        {% if incomes %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Description</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for inc in incomes %}
+            <tr>
+              <td>
+                <span class="d-flex align-items-center gap-2">
+                  {% if inc.source == 'salary' %}<i class="bi bi-briefcase-fill text-primary"></i>
+                  {% elif inc.source == 'business' %}<i class="bi bi-building text-success"></i>
+                  {% elif inc.source == 'freelance' %}<i class="bi bi-laptop text-info"></i>
+                  {% elif inc.source == 'allowance' %}<i class="bi bi-gift text-warning"></i>
+                  {% else %}<i class="bi bi-coin text-secondary"></i>{% endif %}
+                  {{ inc.source|capitalize }}
+                  {% if inc.is_recurring %}<span class="badge bg-info ms-1" title="Recurring">🔁</span>{% endif %}
+                </span>
+              </td>
+              <td><strong class="text-success">₹{{ "%.2f"|format(inc.amount) }}</strong></td>
+              <td>
+                <div style="font-size:0.83rem;color:var(--text-muted);">{{ inc.date_received.strftime('%d %b %Y') }}</div>
+                {% if inc.created_at %}
+                <div style="font-size:0.75rem;color:var(--text-muted);">
+                  Added: <span class="local-time" data-utc="{{ inc.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></span>
+                </div>
+                {% endif %}
+              </td>
+              <td style="font-size:0.83rem;color:var(--text-muted);">{{ inc.description or '—' }}</td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{{ url_for('edit_income', id=inc.id) }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{{ url_for('delete_income', id=inc.id) }}" class="btn btn-danger btn-sm"
+                     onclick="return confirm('Delete this income entry?')">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-cash-coin" style="font-size:2.5rem;opacity:0.3;"></i>
+          <p class="mt-2 mb-0">No income entries yet. Add your first one!</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

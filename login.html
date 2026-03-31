@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.auth-wrap {
+  min-height: 75vh; display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  width: 100%; max-width: 440px;
+  border-radius: 24px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(108,92,231,0.2); border: none;
+}
+.auth-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white; padding: 2.5rem 2rem 2rem; text-align: center;
+}
+.auth-header .auth-icon {
+  width: 68px; height: 68px;
+  background: rgba(255,255,255,0.2); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; margin: 0 auto 1rem; backdrop-filter: blur(10px);
+}
+.auth-header h3 { font-weight: 700; margin: 0 0 4px; font-size: 1.5rem; }
+.auth-header p  { opacity: 0.8; font-size: 0.9rem; margin: 0; }
+.auth-body { padding: 2rem; background: var(--bg-card); }
+.dark-mode .auth-body { background: #1a1d2e; }
+.btn-auth {
+  width: 100%; padding: 0.75rem; border-radius: 50px;
+  font-size: 1rem; font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white; border: none; transition: all 0.28s;
+  box-shadow: 0 6px 20px rgba(108,92,231,0.3);
+}
+.btn-auth:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(108,92,231,0.4); color: white; }
+.auth-divider {
+  text-align: center; font-size: 0.88rem; color: #636e72; margin-top: 1.25rem;
+}
+.auth-divider a { color: #6C5CE7; font-weight: 700; text-decoration: none; }
+.auth-divider a:hover { text-decoration: underline; }
+
+/* MPIN numpad */
+.pin-dots {
+  display: flex; justify-content: center; gap: 14px; margin-bottom: 22px;
+}
+.pin-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(108,92,231,0.4); background: transparent; transition: all 0.2s;
+}
+.pin-dot.filled {
+  background: var(--brand-primary); border-color: var(--brand-primary); transform: scale(1.15);
+}
+.numpad {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px;
+}
+.numpad-btn {
+  aspect-ratio: 1; border-radius: 50%;
+  border: 1.5px solid var(--border-color); background: var(--bg-secondary);
+  font-size: 1.25rem; font-weight: 600; color: var(--text-primary);
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.numpad-btn:hover { background: rgba(108,92,231,0.1); border-color: var(--brand-primary); color: var(--brand-primary); }
+.numpad-btn:active { transform: scale(0.9); }
+.numpad-btn.backspace { font-size: 1rem; }
+.numpad-btn.empty-btn { visibility: hidden; }
+.mpin-user-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(108,92,231,0.07); border-radius: 50px;
+  padding: 8px 14px 8px 10px; margin-bottom: 22px; cursor: pointer;
+  border: 1.5px solid rgba(108,92,231,0.15); transition: border 0.2s;
+}
+.mpin-user-chip:hover { border-color: var(--brand-primary); }
+.mpin-user-chip .avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--gradient-brand); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1rem; flex-shrink: 0;
+}
+.mpin-user-chip .uname { font-weight: 600; font-size: 0.92rem; color: var(--text-primary); }
+.mpin-user-chip .edit-hint { font-size: 0.76rem; color: var(--text-secondary); }
+.use-pwd-link {
+  text-align: center; margin-top: 10px;
+}
+.use-pwd-link a { font-size: 0.84rem; color: var(--brand-primary); cursor: pointer; text-decoration: none; }
+.use-pwd-link a:hover { text-decoration: underline; }
+</style>
+
+<div class="auth-wrap">
+  <div class="auth-card fade-in">
+    <div class="auth-header">
+      <div class="auth-icon" id="headerIcon"><i class="bi bi-person-fill"></i></div>
+      <h3 id="headerTitle">Welcome Back</h3>
+      <p id="headerSub">Sign in to your Money Mate account</p>
+    </div>
+    <div class="auth-body">
+
+      <!-- ── STEP 1: Username ── -->
+      <div id="step-username" {% if show_mpin is defined and show_mpin %}style="display:none"{% endif %}>
+        <form id="usernameForm" onsubmit="checkUser(event)">
+          {{ form.hidden_tag() }}
+          <div class="mb-4">
+            <label class="form-label">Username</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person"></i></span>
+              <input type="text" id="usernameInput" class="form-control"
+                     placeholder="Enter your username"
+                     value="{{ prefill_username or '' }}"
+                     autocomplete="username">
+            </div>
+            <small id="usernameError" class="text-danger" style="display:none;"></small>
+          </div>
+          <button type="submit" class="btn-auth" id="continueBtn">
+            <span id="continueBtnText"><i class="bi bi-arrow-right-circle me-2"></i>Continue</span>
+            <span id="continueBtnSpinner" style="display:none">
+              <span class="spinner-border spinner-border-sm me-2"></span>Checking…
+            </span>
+          </button>
+        </form>
+        <div class="auth-divider">
+          Don't have an account? <a href="{{ url_for('register') }}">Create one free</a>
+        </div>
+      </div>
+
+      <!-- ── STEP 2A: MPIN numpad ── -->
+      <div id="step-mpin" style="display:none">
+        <div class="mpin-user-chip" onclick="goBackToUsername()">
+          <div class="avatar" id="mpinAvatar">?</div>
+          <div>
+            <div class="uname" id="mpinUsernameLabel"></div>
+            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change user</div>
+          </div>
+        </div>
+        <p style="text-align:center;font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px;">Enter your 6-digit MPIN</p>
+        <div class="pin-dots">
+          {% for i in range(6) %}<div class="pin-dot" id="login-dot-{{ i }}"></div>{% endfor %}
+        </div>
+        <form id="mpinForm" method="POST" action="{{ url_for('login') }}">
+          {{ form.hidden_tag() }}
+          <input type="hidden" name="username"   id="mpinUsername">
+          <input type="hidden" name="mpin_input" id="mpinValue">
+        </form>
+        <div class="numpad">
+          {% for n in [1,2,3,4,5,6,7,8,9] %}
+          <button type="button" class="numpad-btn" onclick="loginPadPress({{ n }})">{{ n }}</button>
+          {% endfor %}
+          <button type="button" class="numpad-btn empty-btn">-</button>
+          <button type="button" class="numpad-btn" onclick="loginPadPress(0)">0</button>
+          <button type="button" class="numpad-btn backspace" onclick="loginPadBack()"><i class="bi bi-backspace"></i></button>
+        </div>
+        <div class="use-pwd-link">
+          <a onclick="switchToPassword()">Use password instead</a>
+        </div>
+      </div>
+
+      <!-- ── STEP 2B: Password ── -->
+      <div id="step-password" style="display:none">
+        <div class="mpin-user-chip" onclick="goBackToUsername()">
+          <div class="avatar" id="pwdAvatar">?</div>
+          <div>
+            <div class="uname" id="pwdUsernameLabel"></div>
+            <div class="edit-hint"><i class="bi bi-pencil" style="font-size:0.7rem;"></i> Change user</div>
+          </div>
+        </div>
+        <form id="pwdForm" method="POST" action="{{ url_for('login') }}">
+          {{ form.hidden_tag() }}
+          <input type="hidden" name="username" id="pwdUsername">
+          <div class="mb-4">
+            <label class="form-label">Password</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-lock"></i></span>
+              <input type="password" name="password" id="pwdInput" class="form-control"
+                     placeholder="Enter your password" autocomplete="current-password">
+            </div>
+          </div>
+          <button type="submit" class="btn-auth">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let loginPin = '';
+let currentUsername = '';
+
+// On load — if server said show_mpin or show password, switch directly
+(function () {
+  {% if show_mpin is defined and show_mpin %}
+    const u = "{{ prefill_username or '' }}";
+    if (u) showMpinStep(u);
+  {% elif prefill_username is defined and prefill_username and show_mpin is defined and not show_mpin %}
+    const u = "{{ prefill_username or '' }}";
+    if (u) showPasswordStep(u);
+  {% endif %}
+})();
+
+function checkUser(e) {
+  e.preventDefault();
+  const u = document.getElementById('usernameInput').value.trim();
+  if (!u) { showUsernameError('Please enter your username.'); return; }
+  document.getElementById('continueBtnText').style.display = 'none';
+  document.getElementById('continueBtnSpinner').style.display = 'inline';
+  document.getElementById('continueBtn').disabled = true;
+
+  fetch('/check-mpin-status?username=' + encodeURIComponent(u))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.exists) {
+        showUsernameError('No account found with that username.');
+        document.getElementById('continueBtnText').style.display = 'inline';
+        document.getElementById('continueBtnSpinner').style.display = 'none';
+        document.getElementById('continueBtn').disabled = false;
+      } else if (data.has_mpin) {
+        showMpinStep(u);
+      } else {
+        showPasswordStep(u);
+      }
+    });
+}
+
+function showMpinStep(username) {
+  currentUsername = username;
+  document.getElementById('step-username').style.display = 'none';
+  document.getElementById('step-mpin').style.display = 'block';
+  const initial = username.charAt(0).toUpperCase();
+  document.getElementById('mpinAvatar').textContent = initial;
+  document.getElementById('mpinUsernameLabel').textContent = username;
+  document.getElementById('mpinUsername').value = username;
+  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-shield-lock-fill"></i>';
+  document.getElementById('headerTitle').textContent = 'Enter MPIN';
+  document.getElementById('headerSub').textContent = 'Your 6-digit quick-login PIN';
+  loginPin = ''; updateLoginDots();
+}
+
+function showPasswordStep(username) {
+  currentUsername = username;
+  document.getElementById('step-username').style.display = 'none';
+  document.getElementById('step-mpin').style.display = 'none';
+  document.getElementById('step-password').style.display = 'block';
+  const initial = username.charAt(0).toUpperCase();
+  document.getElementById('pwdAvatar').textContent = initial;
+  document.getElementById('pwdUsernameLabel').textContent = username;
+  document.getElementById('pwdUsername').value = username;
+  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-lock-fill"></i>';
+  document.getElementById('headerTitle').textContent = 'Enter Password';
+  document.getElementById('headerSub').textContent = 'Secure access to your account';
+  setTimeout(() => { const p = document.getElementById('pwdInput'); if (p) p.focus(); }, 100);
+}
+
+function switchToPassword() {
+  showPasswordStep(currentUsername);
+}
+
+function goBackToUsername() {
+  document.getElementById('step-mpin').style.display = 'none';
+  document.getElementById('step-password').style.display = 'none';
+  document.getElementById('step-username').style.display = 'block';
+  document.getElementById('headerIcon').innerHTML = '<i class="bi bi-person-fill"></i>';
+  document.getElementById('headerTitle').textContent = 'Welcome Back';
+  document.getElementById('headerSub').textContent = 'Sign in to your Money Mate account';
+  document.getElementById('continueBtnText').style.display = 'inline';
+  document.getElementById('continueBtnSpinner').style.display = 'none';
+  document.getElementById('continueBtn').disabled = false;
+}
+
+function updateLoginDots() {
+  for (let i = 0; i < 6; i++) {
+    const d = document.getElementById('login-dot-' + i);
+    if (d) d.classList.toggle('filled', i < loginPin.length);
+  }
+}
+
+function loginPadPress(digit) {
+  if (loginPin.length >= 6) return;
+  loginPin += String(digit);
+  updateLoginDots();
+  if (loginPin.length === 6) {
+    setTimeout(() => {
+      document.getElementById('mpinValue').value = loginPin;
+      document.getElementById('mpinForm').submit();
+    }, 180);
+  }
+}
+
+function loginPadBack() {
+  loginPin = loginPin.slice(0, -1);
+  updateLoginDots();
+}
+
+function showUsernameError(msg) {
+  const el = document.getElementById('usernameError');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+</script>
+
+{% endblock %}

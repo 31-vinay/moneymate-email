@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-start justify-content-between mb-4 fade-in flex-wrap gap-3">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color: var(--text-primary);">
+      <i class="bi bi-hand-wave me-2" style="color: var(--brand-primary);"></i>Welcome back, <span style="color: var(--brand-primary);">{{ current_user.username }}</span>!
+    </h4>
+    <p class="text-muted mb-0" style="font-size:0.88rem;">Here's your financial snapshot for this month.</p>
+  </div>
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="dashboard-clock">
+      <div class="clock-date">{{ now.strftime('%A, %d %b %Y') }}</div>
+      <div class="clock-time">{{ now.strftime('%I:%M %p') }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('add_income') }}" class="btn btn-success btn-sm"><i class="bi bi-plus me-1"></i>Income</a>
+      <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Expense</a>
+    </div>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4 fade-in fade-in-delay-1">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-income">
+      <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+      <div class="stat-label">Total Income</div>
+      <div class="stat-value">₹{{ "%.0f"|format(total_income) }}</div>
+      <div class="stat-sub">This month</div>
+      <div class="stat-bg-icon"><i class="bi bi-cash-stack"></i></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-expense">
+      <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
+      <div class="stat-label">Total Spent</div>
+      <div class="stat-value">₹{{ "%.0f"|format(total_spent) }}</div>
+      <div class="stat-sub">This month</div>
+      <div class="stat-bg-icon"><i class="bi bi-wallet2"></i></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-balance">
+      <div class="stat-icon"><i class="bi bi-bank"></i></div>
+      <div class="stat-label">Net Balance</div>
+      <div class="stat-value">₹{{ "%.0f"|format(total_income - total_spent) }}</div>
+      <div class="stat-sub">Income - Expenses</div>
+      <div class="stat-bg-icon"><i class="bi bi-bar-chart"></i></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-burn">
+      <div class="stat-icon"><i class="bi bi-fire"></i></div>
+      <div class="stat-label">Burn Rate</div>
+      <div class="stat-value">₹{{ "%.0f"|format(burn_rate) }}</div>
+      <div class="stat-sub">Per day average</div>
+      <div class="stat-bg-icon"><i class="bi bi-graph-up-arrow"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- 50/30/20 Budget Rule Tracker -->
+{% if total_income > 0 %}
+<div class="card mb-4 fade-in fade-in-delay-1">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-pie-chart-fill me-2"></i>50/30/20 Budget Tracker</span>
+    <span class="badge bg-secondary" style="font-size:0.78rem;">Based on ₹{{ "%.0f"|format(total_income) }} income</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+
+      <!-- Needs (50%) -->
+      <div class="col-md-4">
+        <div class="p-3 rounded-3 h-100" style="background: rgba(0,184,148,0.07); border: 1px solid rgba(0,184,148,0.2);">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold" style="color:#00b894;"><i class="bi bi-house-heart-fill me-1"></i>Needs <span class="text-muted fw-normal" style="font-size:0.8rem;">(50%)</span></span>
+            <span class="badge {% if needs_over %}bg-danger{% elif needs_warning %}bg-warning text-dark{% else %}bg-success{% endif %}">
+              {% if needs_over %}Over budget{% elif needs_warning %}Almost full{% else %}On track{% endif %}
+            </span>
+          </div>
+          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Budget: ₹{{ "%.0f"|format(budget_needs) }}</div>
+          <div class="progress mb-2" style="height:12px;">
+            <div class="progress-bar {% if needs_over %}bg-danger{% elif needs_warning %}bg-warning{% else %}bg-success{% endif %}"
+                 style="width:{{ needs_used_pct }}%;" title="{{ "%.1f"|format(needs_used_pct) }}% used"></div>
+          </div>
+          <div class="d-flex justify-content-between" style="font-size:0.85rem;">
+            <span>Spent: <strong>₹{{ "%.0f"|format(essential) }}</strong></span>
+            <span>
+              {% if needs_over %}
+                <span class="text-danger">Over by ₹{{ "%.0f"|format(essential - budget_needs) }}</span>
+              {% else %}
+                Left: <strong>₹{{ "%.0f"|format(needs_remaining) }}</strong>
+              {% endif %}
+            </span>
+          </div>
+          {% if needs_warning %}
+          <div class="alert alert-warning mt-2 py-1 mb-0" style="font-size:0.8rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Only 10% of your Needs budget remains!
+          </div>
+          {% endif %}
+          {% if needs_over %}
+          <div class="alert alert-danger mt-2 py-1 mb-0" style="font-size:0.8rem;">
+            <i class="bi bi-x-circle-fill me-1"></i>You've exceeded your Needs budget!
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Wants (30%) -->
+      <div class="col-md-4">
+        <div class="p-3 rounded-3 h-100" style="background: rgba(243,156,18,0.07); border: 1px solid rgba(243,156,18,0.2);">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold" style="color:#f39c12;"><i class="bi bi-star-fill me-1"></i>Wants <span class="text-muted fw-normal" style="font-size:0.8rem;">(30%)</span></span>
+            <span class="badge {% if wants_over %}bg-danger{% elif wants_warning %}bg-warning text-dark{% else %}bg-warning text-dark{% endif %}">
+              {% if wants_over %}Over budget{% elif wants_warning %}Almost full{% else %}On track{% endif %}
+            </span>
+          </div>
+          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Budget: ₹{{ "%.0f"|format(budget_wants) }}</div>
+          <div class="progress mb-2" style="height:12px;">
+            <div class="progress-bar {% if wants_over %}bg-danger{% elif wants_warning %}bg-warning{% else %}bg-warning{% endif %}"
+                 style="width:{{ wants_used_pct }}%;" title="{{ "%.1f"|format(wants_used_pct) }}% used"></div>
+          </div>
+          <div class="d-flex justify-content-between" style="font-size:0.85rem;">
+            <span>Spent: <strong>₹{{ "%.0f"|format(non_essential) }}</strong></span>
+            <span>
+              {% if wants_over %}
+                <span class="text-danger">Over by ₹{{ "%.0f"|format(non_essential - budget_wants) }}</span>
+              {% else %}
+                Left: <strong>₹{{ "%.0f"|format(wants_remaining) }}</strong>
+              {% endif %}
+            </span>
+          </div>
+          {% if wants_warning %}
+          <div class="alert alert-warning mt-2 py-1 mb-0" style="font-size:0.8rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Only 10% of your Wants budget remains!
+          </div>
+          {% endif %}
+          {% if wants_over %}
+          <div class="alert alert-danger mt-2 py-1 mb-0" style="font-size:0.8rem;">
+            <i class="bi bi-x-circle-fill me-1"></i>You've exceeded your Wants budget!
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Savings & Debt (20%) -->
+      <div class="col-md-4">
+        <div class="p-3 rounded-3 h-100" style="background: rgba(108,92,231,0.07); border: 1px solid rgba(108,92,231,0.2);">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold" style="color:#6C5CE7;"><i class="bi bi-piggy-bank-fill me-1"></i>Savings &amp; Debt <span class="text-muted fw-normal" style="font-size:0.8rem;">(20%)</span></span>
+            <span class="badge" style="background:#6C5CE7;">Allocated</span>
+          </div>
+          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Recommended to save/repay:</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#6C5CE7;">₹{{ "%.0f"|format(budget_savings) }}</div>
+          <div class="mt-2" style="font-size:0.85rem;color:var(--text-muted);">
+            Total saved across all goals: <strong style="color:#6C5CE7;">₹{{ "%.0f"|format(total_savings) }}</strong>
+          </div>
+          <a href="{{ url_for('goals') }}" class="btn btn-sm mt-2" style="background:#6C5CE7;color:#fff;font-size:0.8rem;">
+            <i class="bi bi-bullseye me-1"></i>View Goals
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Goal Suggestions by Priority -->
+{% if goal_suggestions %}
+<div class="card mb-4 fade-in fade-in-delay-1" style="border: 1px solid rgba(108,92,231,0.25);">
+  <div class="card-header d-flex align-items-center justify-content-between" style="background:rgba(108,92,231,0.08);">
+    <span><i class="bi bi-lightbulb-fill me-2" style="color:#f39c12;"></i>Where to Put Your Savings &amp; Extra Money</span>
+    <span class="badge bg-secondary" style="font-size:0.75rem;">Sorted by priority</span>
+  </div>
+  <div class="card-body py-2">
+    <p class="text-muted mb-3" style="font-size:0.85rem;">Based on your goal priorities, here's how to allocate your monthly savings budget of <strong>₹{{ "%.0f"|format(savings_allocated) }}</strong>:</p>
+    <div class="row g-2">
+      {% for sg in goal_suggestions %}
+      <div class="col-md-4">
+        <div class="p-3 rounded-3 h-100" style="background:rgba(108,92,231,0.06);border:1px solid rgba(108,92,231,0.2);">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span style="font-size:1rem;font-weight:800;color:#6C5CE7;min-width:28px;">#{{ sg.priority }}</span>
+            <span style="font-weight:600;font-size:0.88rem;">{{ sg.name }}</span>
+          </div>
+          <div style="font-size:1.1rem;font-weight:700;color:#6C5CE7;">
+            ₹{{ "%.0f"|format(sg.suggested) }}
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">suggested this month</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);" class="mt-1">₹{{ "%.0f"|format(sg.remaining) }} still needed</div>
+          <a href="{{ url_for('goal_detail', id=sg.id) }}" class="btn btn-sm mt-2" style="font-size:0.75rem;padding:2px 10px;background:#6C5CE7;color:#fff;">
+            Add to this goal
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Income Sources & Subscriptions -->
+<div class="row g-3 mb-4 fade-in fade-in-delay-2">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-cash-coin"></i> Income Sources</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush px-3">
+          {% for src, amt in source_breakdown.items() %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span class="d-flex align-items-center gap-2">
+              {% if src == 'salary' %}<i class="bi bi-briefcase-fill text-primary"></i>
+              {% elif src == 'business' %}<i class="bi bi-building text-success"></i>
+              {% elif src == 'freelance' %}<i class="bi bi-laptop text-info"></i>
+              {% elif src == 'allowance' %}<i class="bi bi-gift text-warning"></i>
+              {% else %}<i class="bi bi-coin text-secondary"></i>{% endif %}
+              {{ src|capitalize }}
+            </span>
+            <span class="badge bg-primary">₹{{ "%.0f"|format(amt) }} &middot; {{ "%.1f"|format(source_percentages[src]) }}%</span>
+          </li>
+          {% else %}
+          <li class="list-group-item text-muted">No income recorded this month. <a href="{{ url_for('add_income') }}">Add income</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-arrow-repeat"></i> Detected Subscriptions</div>
+      <div class="card-body">
+        {% if subscriptions %}
+        <div class="table-wrapper">
+          <table class="table table-hover">
+            <thead><tr><th>Service</th><th>Avg. Amount</th><th>Freq.</th></tr></thead>
+            <tbody>
+            {% for sub in subscriptions[:5] %}
+            <tr>
+              <td>
+                {% if 'netflix' in sub.category.lower() or 'streaming' in sub.category.lower() %}📺
+                {% elif 'spotify' in sub.category.lower() or 'music' in sub.category.lower() %}🎵
+                {% elif 'gym' in sub.category.lower() %}💪
+                {% else %}🔄{% endif %}
+                {{ sub.category }}
+              </td>
+              <td>₹{{ "%.0f"|format(sub.avg_amount) }}</td>
+              <td><span class="badge bg-info">{{ sub.frequency }}x</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <strong style="font-size:0.9rem;">Total: ₹{{ "%.0f"|format(total_sub_cost) }}/mo</strong>
+          <a href="{{ url_for('subscriptions') }}" class="btn btn-info btn-sm">View All</a>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-arrow-repeat" style="font-size:2.5rem;opacity:0.3;"></i>
+          <p class="mt-2 mb-0">No recurring subscriptions detected.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-arrow-down-circle"></i> Recent Income</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead><tr><th>Source</th><th>Amount</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+            {% for inc in recent_incomes %}
+            <tr>
+              <td>
+                {% if inc.source == 'salary' %}💼{% elif inc.source == 'business' %}🏢
+                {% elif inc.source == 'freelance' %}💻{% elif inc.source == 'allowance' %}🎁
+                {% else %}💰{% endif %}
+                {{ inc.source|capitalize }}
+              </td>
+              <td><strong class="text-success">₹{{ "%.0f"|format(inc.amount) }}</strong></td>
+              <td style="font-size:0.82rem;color:var(--text-muted);">{{ inc.date_received.strftime('%d %b') }}</td>
+              <td>
+                <a href="{{ url_for('edit_income', id=inc.id) }}" class="btn btn-primary btn-sm">Edit</a>
+                <a href="{{ url_for('delete_income', id=inc.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Delete this income?')">Del</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">No income yet. <a href="{{ url_for('add_income') }}">Add one</a></td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-arrow-up-circle"></i> Recent Expenses</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead><tr><th>Category</th><th>Amount</th><th>Type</th><th></th></tr></thead>
+            <tbody>
+            {% for exp in recent_expenses %}
+            <tr>
+              <td>
+                {% if 'rent' in exp.category.lower() or 'mortgage' in exp.category.lower() %}🏠
+                {% elif 'food' in exp.category.lower() or 'groceries' in exp.category.lower() %}🍔
+                {% elif 'transport' in exp.category.lower() %}🚗
+                {% elif 'health' in exp.category.lower() %}🏥
+                {% elif 'entertainment' in exp.category.lower() %}🎮
+                {% else %}📌{% endif %}
+                {{ exp.category }}
+              </td>
+              <td><strong class="text-danger">₹{{ "%.0f"|format(exp.amount) }}</strong></td>
+              <td>
+                <span class="badge {% if exp.is_essential %}bg-success{% else %}bg-warning{% endif %}">
+                  {% if exp.is_essential %}Need{% else %}Want{% endif %}
+                </span>
+              </td>
+              <td>
+                <a href="{{ url_for('edit_expense', id=exp.id) }}" class="btn btn-primary btn-sm">Edit</a>
+                <a href="{{ url_for('delete_expense', id=exp.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Delete this expense?')">Del</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">No expenses yet. <a href="{{ url_for('add_expense') }}">Add one</a></td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Full Analysis -->
+<div class="card mb-4 fade-in" style="border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.04);">
+  <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3 py-3">
+    <div>
+      <div class="fw-semibold mb-1" style="color:var(--brand-primary);">
+        <i class="bi bi-bar-chart-line me-2"></i>Charts &amp; In-Depth Analysis
+      </div>
+      <div class="text-muted" style="font-size:0.85rem;">
+        Expense Distribution &nbsp;·&nbsp; Category Breakdown &nbsp;·&nbsp; Monthly Spending Trend &nbsp;·&nbsp; Income vs Expense
+      </div>
+    </div>
+    <a href="{{ url_for('analysis') }}" class="btn btn-primary px-4 rounded-pill">
+      View Analysis
+    </a>
+  </div>
+</div>
+
+{% endblock %}
