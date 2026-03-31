@@ -613,6 +613,7 @@ main {
    DARK MODE
    ============================================= */
 .dark-mode {
+  /* App vars */
   --bg-page: #0f1117;
   --bg-card: #1a1d2e;
   --bg-card-hover: #1e2135;
@@ -622,6 +623,62 @@ main {
   --border-color: rgba(162, 155, 254, 0.15);
   --shadow-md: 0 8px 30px rgba(0,0,0,0.4);
   --shadow-hover: 0 15px 40px rgba(0,0,0,0.55);
+
+  /* Bootstrap 5 CSS variable overrides — without these Bootstrap ignores our rules */
+  --bs-body-color: #e8eaf6;
+  --bs-body-bg: #0f1117;
+  --bs-border-color: rgba(162, 155, 254, 0.15);
+
+  /* Cards */
+  --bs-card-bg: #1a1d2e;
+  --bs-card-color: #e8eaf6;
+  --bs-card-border-color: rgba(162, 155, 254, 0.15);
+  --bs-card-cap-bg: transparent;
+
+  /* Tables */
+  --bs-table-bg: transparent;
+  --bs-table-color: #e8eaf6;
+  --bs-table-border-color: rgba(162, 155, 254, 0.08);
+  --bs-table-hover-bg: rgba(108, 92, 231, 0.08);
+  --bs-table-hover-color: #e8eaf6;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+  --bs-table-striped-color: #e8eaf6;
+  --bs-table-active-bg: rgba(108, 92, 231, 0.12);
+  --bs-table-active-color: #e8eaf6;
+
+  /* List groups */
+  --bs-list-group-bg: transparent;
+  --bs-list-group-color: #e8eaf6;
+  --bs-list-group-border-color: rgba(162, 155, 254, 0.12);
+  --bs-list-group-hover-bg: rgba(108, 92, 231, 0.08);
+  --bs-list-group-action-color: #9fa8da;
+  --bs-list-group-action-hover-color: #e8eaf6;
+  --bs-list-group-action-active-bg: rgba(108, 92, 231, 0.12);
+  --bs-list-group-disabled-color: #5c6bc0;
+  --bs-list-group-disabled-bg: transparent;
+  --bs-list-group-active-color: #fff;
+  --bs-list-group-active-bg: #6C5CE7;
+  --bs-list-group-active-border-color: #6C5CE7;
+
+  /* Modals */
+  --bs-modal-bg: #1a1d2e;
+  --bs-modal-color: #e8eaf6;
+  --bs-modal-border-color: rgba(162, 155, 254, 0.15);
+  --bs-modal-header-border-color: rgba(162, 155, 254, 0.12);
+  --bs-modal-footer-border-color: rgba(162, 155, 254, 0.12);
+
+  /* Forms */
+  --bs-form-control-bg: #1e2135;
+  --bs-form-control-color: #e8eaf6;
+  --bs-form-control-border-color: rgba(162, 155, 254, 0.2);
+
+  /* Dropdowns */
+  --bs-dropdown-bg: #1a1d2e;
+  --bs-dropdown-color: #e8eaf6;
+  --bs-dropdown-border-color: rgba(162, 155, 254, 0.15);
+  --bs-dropdown-link-color: #e8eaf6;
+  --bs-dropdown-link-hover-color: #fff;
+  --bs-dropdown-link-hover-bg: rgba(108, 92, 231, 0.12);
 }
 
 .dark-mode body {
@@ -662,13 +719,50 @@ main {
   background: #242842;
 }
 
+/* Override Bootstrap's component-level CSS variables for dark mode.
+   Bootstrap defines these on the component itself (e.g. .list-group, .table),
+   so we must target the same element to win the cascade. */
+
+.dark-mode .list-group {
+  --bs-list-group-bg: transparent;
+  --bs-list-group-color: #e8eaf6;
+  --bs-list-group-border-color: rgba(162, 155, 254, 0.12);
+  --bs-list-group-hover-bg: rgba(108, 92, 231, 0.08);
+  --bs-list-group-action-color: #9fa8da;
+  --bs-list-group-action-hover-color: #e8eaf6;
+  --bs-list-group-disabled-color: #5c6bc0;
+  --bs-list-group-disabled-bg: transparent;
+}
+
 .dark-mode .list-group-item {
   color: var(--text-primary);
   border-bottom-color: rgba(162, 155, 254, 0.08);
 }
 
 .dark-mode .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: #e8eaf6;
+  --bs-table-border-color: rgba(162, 155, 254, 0.08);
+  --bs-table-hover-bg: rgba(108, 92, 231, 0.08);
+  --bs-table-hover-color: #e8eaf6;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+  --bs-table-striped-color: #e8eaf6;
   color: var(--text-primary);
+}
+
+.dark-mode .card {
+  --bs-card-bg: #1a1d2e;
+  --bs-card-color: #e8eaf6;
+  --bs-card-border-color: rgba(162, 155, 254, 0.15);
+  --bs-card-cap-bg: transparent;
+}
+
+.dark-mode .modal-content {
+  --bs-modal-bg: #1a1d2e;
+  --bs-modal-color: #e8eaf6;
+  --bs-modal-border-color: rgba(162, 155, 254, 0.15);
+  --bs-modal-header-border-color: rgba(162, 155, 254, 0.12);
+  --bs-modal-footer-border-color: rgba(162, 155, 254, 0.12);
 }
 
 .dark-mode .text-muted {
