@@ -821,7 +821,7 @@ def check_subscription_expiry(user_id):
 @app.route("/remove_expired_subscription/<int:id>")
 @login_required
 def remove_expired_subscription(id):
-    expense = Expense.query.get_or_404(id)
+    expense = db.get_or_404(Expense, id)
     if expense.user_id != current_user.id:
         flash("Unauthorized.", "danger")
         return redirect(url_for("subscriptions"))
@@ -1339,7 +1339,7 @@ def add_income():
 @app.route("/edit_income/<int:id>", methods=["GET", "POST"])
 @login_required
 def edit_income(id):
-    income = Income.query.get_or_404(id)
+    income = db.get_or_404(Income, id)
     if income.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("dashboard"))
@@ -1373,7 +1373,7 @@ def edit_income(id):
 @app.route("/delete_income/<int:id>")
 @login_required
 def delete_income(id):
-    income = Income.query.get_or_404(id)
+    income = db.get_or_404(Income, id)
     if income.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("dashboard"))
@@ -1456,7 +1456,6 @@ def add_expense():
             flash("Expense added successfully!", "success")
             return redirect(url_for("dashboard"))
         else:
-            print("Form errors:", form.errors)
             flash("Please check the form and try again.", "danger")
     else:
         form.sub_category.choices = [("", "-- Select Sub Category First --")]
@@ -1491,7 +1490,7 @@ def add_expense():
 @app.route("/edit_expense/<int:id>", methods=["GET", "POST"])
 @login_required
 def edit_expense(id):
-    expense = Expense.query.get_or_404(id)
+    expense = db.get_or_404(Expense, id)
     if expense.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("dashboard"))
@@ -1580,7 +1579,7 @@ def edit_expense(id):
 @app.route("/delete_expense/<int:id>")
 @login_required
 def delete_expense(id):
-    expense = Expense.query.get_or_404(id)
+    expense = db.get_or_404(Expense, id)
     if expense.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("dashboard"))
@@ -1652,7 +1651,7 @@ def add_goal():
 @app.route("/goal/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_goal(id):
-    goal = Goal.query.get_or_404(id)
+    goal = db.get_or_404(Goal, id)
     if goal.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("goals"))
@@ -1678,7 +1677,7 @@ def edit_goal(id):
 @app.route("/goal/<int:id>", methods=["GET", "POST"])
 @login_required
 def goal_detail(id):
-    goal = Goal.query.get_or_404(id)
+    goal = db.get_or_404(Goal, id)
     if goal.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("goals"))
@@ -1724,7 +1723,7 @@ def goal_detail(id):
 @app.route("/goal/<int:id>/delete")
 @login_required
 def delete_goal(id):
-    goal = Goal.query.get_or_404(id)
+    goal = db.get_or_404(Goal, id)
     if goal.user_id != current_user.id:
         flash("Unauthorized access.", "danger")
         return redirect(url_for("goals"))
@@ -1738,7 +1737,7 @@ def delete_goal(id):
 @app.route("/what_if/<int:id>", methods=["POST"])
 @login_required
 def what_if(id):
-    goal = Goal.query.get_or_404(id)
+    goal = db.get_or_404(Goal, id)
     if goal.user_id != current_user.id:
         return jsonify({"error": "Unauthorized"}), 403
 
