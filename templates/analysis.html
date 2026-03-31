@@ -34,28 +34,34 @@
 <!-- Summary row -->
 <div class="row g-3 mb-4 fade-in fade-in-delay-1">
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-income h-100 d-flex flex-column justify-content-center align-items-center text-center">
+    <div class="stat-card stat-income h-100">
+      <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
       <div class="stat-label">This Month Income</div>
       <div class="stat-value">₹{{ "%.0f"|format(total_income) }}</div>
+      <div class="stat-sub">This month</div>
       <div class="stat-bg-icon"><i class="bi bi-cash-stack"></i></div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-expense h-100 d-flex flex-column justify-content-center align-items-center text-center">
+    <div class="stat-card stat-expense h-100">
+      <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
       <div class="stat-label">This Month Spent</div>
       <div class="stat-value">₹{{ "%.0f"|format(total_spent) }}</div>
+      <div class="stat-sub">This month</div>
       <div class="stat-bg-icon"><i class="bi bi-wallet2"></i></div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-balance h-100 d-flex flex-column justify-content-center align-items-center text-center">
+    <div class="stat-card stat-balance h-100">
+      <div class="stat-icon"><i class="bi bi-house-heart-fill"></i></div>
       <div class="stat-label">Needs (Essential)</div>
       <div class="stat-value">₹{{ "%.0f"|format(essential) }}</div>
+      <div class="stat-sub">Essential expenses</div>
       <div class="stat-bg-icon"><i class="bi bi-house-heart"></i></div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-burn h-100 d-flex flex-column justify-content-center align-items-center text-center">
+    <div class="stat-card stat-burn h-100">
       <div class="stat-icon"><i class="bi bi-fire"></i></div>
       <div class="stat-label">Burn Rate</div>
       <div class="stat-value">₹{{ "%.0f"|format(burn_rate) }}</div>
