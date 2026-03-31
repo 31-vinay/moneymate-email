@@ -1106,6 +1106,28 @@ def dashboard():
     # Total savings across all goals
     total_savings = sum(g.saved_amount for g in goals)
 
+    # Month-end prediction
+    import calendar
+    days_in_month = calendar.monthrange(now.year, now.month)[1]
+    days_remaining = days_in_month - now.day
+    projected_month_end_spend = total_spent + (burn_rate * days_remaining)
+    predicted_balance = total_income - projected_month_end_spend
+    show_month_forecast_warning = (days_remaining <= 10) and (predicted_balance < 0)
+
+    # Personalized saving tips for the warning alert
+    shortfall = abs(predicted_balance) if predicted_balance < 0 else 0
+    required_daily_savings = round(shortfall / days_remaining, 2) if days_remaining > 0 else shortfall
+
+    # Top non-essential spending categories
+    non_essential_categories = {}
+    for e in expenses:
+        if not e.is_essential:
+            non_essential_categories[e.category] = non_essential_categories.get(e.category, 0) + e.amount
+    top_non_essential_cats = sorted(non_essential_categories.items(), key=lambda x: x[1], reverse=True)[:3]
+
+    # Subscriptions to consider pausing
+    top_subs = sorted(subscriptions, key=lambda s: s["avg_amount"], reverse=True)[:3]
+
     # Goal suggestions: recommend where to put savings/extra money based on numeric priority
     def goal_priority_num(g):
         try:
@@ -1167,6 +1189,15 @@ def dashboard():
         total_savings=total_savings,
         goal_suggestions=goal_suggestions,
         goals=goals,
+        days_remaining=days_remaining,
+        days_in_month=days_in_month,
+        projected_month_end_spend=projected_month_end_spend,
+        predicted_balance=predicted_balance,
+        show_month_forecast_warning=show_month_forecast_warning,
+        shortfall=shortfall,
+        required_daily_savings=required_daily_savings,
+        top_non_essential_cats=top_non_essential_cats,
+        top_subs=top_subs,
     )
 
 

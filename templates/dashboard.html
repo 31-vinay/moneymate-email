@@ -41,6 +41,46 @@
   </div>
 </div>
 
+<!-- Month-End Warning Alert (only when ≤10 days left AND shortfall predicted) -->
+{% if show_month_forecast_warning %}
+<div class="alert alert-danger alert-dismissible fade show mb-4 fade-in" role="alert" style="border-left: 5px solid #d63031; background: rgba(214,48,49,0.08);">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-exclamation-triangle-fill fs-4 mt-1" style="color:#d63031;flex-shrink:0;"></i>
+    <div class="flex-grow-1">
+      <h6 class="alert-heading fw-bold mb-1" style="color:#d63031;">
+        Money Running Out Before Month-End!
+      </h6>
+      <p class="mb-2" style="font-size:0.9rem;">
+        You're <strong>{{ days_remaining }} day{{ 's' if days_remaining != 1 else '' }}</strong> from month-end and are projected to be short by
+        <strong>₹{{ "%.0f"|format(shortfall) }}</strong> at your current spending rate.
+      </p>
+      <p class="fw-semibold mb-1" style="font-size:0.88rem;">Here's how to close the gap:</p>
+      <ol class="mb-0" style="font-size:0.87rem; padding-left:1.2rem;">
+        <li>Save <strong>₹{{ "%.0f"|format(required_daily_savings) }}/day</strong> for the remaining {{ days_remaining }} day{{ 's' if days_remaining != 1 else '' }} to break even.</li>
+        {% if top_non_essential_cats %}
+        <li>
+          Cut back on your top non-essential spending:
+          {% for cat, amt in top_non_essential_cats %}
+          <strong>{{ cat }}</strong> (₹{{ "%.0f"|format(amt) }} so far){% if not loop.last %}, {% endif %}
+          {% endfor %}.
+        </li>
+        {% endif %}
+        {% if top_subs %}
+        <li>
+          Consider pausing non-essential subscriptions:
+          {% for sub in top_subs %}
+          <strong>{{ sub.category }}</strong> (₹{{ "%.0f"|format(sub.avg_amount) }}/mo){% if not loop.last %}, {% endif %}
+          {% endfor %}.
+        </li>
+        {% endif %}
+        <li>Avoid all discretionary spending for the next {{ days_remaining }} day{{ 's' if days_remaining != 1 else '' }}.</li>
+      </ol>
+    </div>
+  </div>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
 <!-- Stat Cards -->
 <div class="row g-3 mb-4 fade-in fade-in-delay-1">
   <div class="col-6 col-lg-4">
@@ -178,6 +218,49 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Month Forecast Card -->
+<div class="card mb-4 fade-in fade-in-delay-1">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-calendar-check-fill me-2"></i>Month Forecast</span>
+    <span class="badge bg-secondary" style="font-size:0.78rem;">{{ days_remaining }} day{{ 's' if days_remaining != 1 else '' }} remaining</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="p-3 rounded-3 h-100" style="background: rgba(9,132,227,0.07); border: 1px solid rgba(9,132,227,0.2);">
+          <div class="text-muted mb-1" style="font-size:0.8rem;"><i class="bi bi-graph-up me-1"></i>Projected Month-End Spending</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#0984e3;">₹{{ "%.0f"|format(projected_month_end_spend) }}</div>
+          <div class="text-muted" style="font-size:0.75rem;">Based on ₹{{ "%.0f"|format(burn_rate) }}/day burn rate</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-3 rounded-3 h-100" style="background: {% if predicted_balance >= 0 %}rgba(0,184,148,0.07); border: 1px solid rgba(0,184,148,0.2){% else %}rgba(214,48,49,0.07); border: 1px solid rgba(214,48,49,0.2){% endif %};">
+          <div class="text-muted mb-1" style="font-size:0.8rem;"><i class="bi bi-wallet2 me-1"></i>Predicted Balance</div>
+          <div style="font-size:1.5rem;font-weight:700;color:{% if predicted_balance >= 0 %}#00b894{% else %}#d63031{% endif %};">
+            {% if predicted_balance >= 0 %}+{% endif %}₹{{ "%.0f"|format(predicted_balance) }}
+          </div>
+          <div class="text-muted" style="font-size:0.75rem;">Income minus projected spend</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        {% if predicted_balance >= 0 %}
+        <div class="p-3 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center" style="background: rgba(0,184,148,0.1); border: 2px solid #00b894;">
+          <i class="bi bi-check-circle-fill fs-2 mb-2" style="color:#00b894;"></i>
+          <div class="fw-bold" style="color:#00b894;">On Track</div>
+          <div class="text-muted" style="font-size:0.8rem;">Finances look healthy for the rest of the month.</div>
+        </div>
+        {% else %}
+        <div class="p-3 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center" style="background: rgba(214,48,49,0.1); border: 2px solid #d63031;">
+          <i class="bi bi-x-circle-fill fs-2 mb-2" style="color:#d63031;"></i>
+          <div class="fw-bold" style="color:#d63031;">Shortfall Predicted</div>
+          <div class="text-muted" style="font-size:0.8rem;">You may run out of money before month-end.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Goal Suggestions by Priority -->
 {% if goal_suggestions %}
