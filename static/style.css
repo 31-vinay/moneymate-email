@@ -97,13 +97,6 @@ main {
   text-decoration: none;
 }
 
-.brand-img {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-
 .brand-logo .brand-icon {
   width: 32px;
   height: 32px;
