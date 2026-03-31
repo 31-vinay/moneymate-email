@@ -707,6 +707,133 @@ main {
   background: #1e2135;
 }
 
+/* --- Alerts --- */
+.dark-mode .alert-success {
+  background: rgba(0, 184, 148, 0.15);
+  color: #55efc4;
+}
+.dark-mode .alert-danger {
+  background: rgba(214, 48, 49, 0.18);
+  color: #ff7675;
+}
+
+/* --- btn-close (Bootstrap X button) --- */
+.dark-mode .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* --- Modals --- */
+.dark-mode .modal-content {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.dark-mode .modal-header,
+.dark-mode .modal-footer {
+  border-color: var(--border-color);
+}
+.dark-mode .modal-title {
+  color: var(--text-primary);
+}
+
+/* --- Outline buttons --- */
+.dark-mode .btn-outline-primary {
+  color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  background: transparent;
+}
+.dark-mode .btn-outline-primary:hover {
+  background: rgba(162, 155, 254, 0.15);
+  color: white;
+  border-color: var(--brand-secondary);
+}
+.dark-mode .btn-outline-danger {
+  color: #ff7675;
+  border-color: #ff7675;
+  background: transparent;
+}
+.dark-mode .btn-outline-danger:hover {
+  background: rgba(214, 48, 49, 0.15);
+  color: #ff7675;
+}
+
+/* --- Secondary button --- */
+.dark-mode .btn-secondary {
+  background: #2d3153;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.dark-mode .btn-secondary:hover {
+  background: #363b5e;
+  color: var(--text-primary);
+}
+
+/* --- Form elements --- */
+.dark-mode .form-control::placeholder,
+.dark-mode .form-select::placeholder {
+  color: rgba(159, 168, 218, 0.45);
+}
+.dark-mode .form-check-label {
+  color: var(--text-primary);
+}
+.dark-mode .form-check-input {
+  background-color: #1e2135;
+  border-color: var(--border-color);
+}
+.dark-mode .input-group-text {
+  background: linear-gradient(135deg, #3d348b 0%, #5a3d8a 100%);
+  color: white;
+  border-color: var(--border-color);
+}
+
+/* --- Auth dividers / small text --- */
+.dark-mode .auth-divider {
+  color: var(--text-secondary);
+}
+.dark-mode .auth-divider a {
+  color: var(--brand-secondary);
+}
+
+/* --- Numpad buttons (login MPIN) --- */
+.dark-mode .numpad-btn {
+  background: #1e2135;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.dark-mode .numpad-btn:hover {
+  background: rgba(108, 92, 231, 0.2);
+}
+
+/* --- Subscriptions/goal inline panels --- */
+.dark-mode .p-3.rounded-3[style*="background: rgba(0,184,148"] ,
+.dark-mode .p-3.rounded-3[style*="background: rgba(243,156,18"],
+.dark-mode .p-3.rounded-3[style*="background: rgba(108,92,231"] {
+  color: var(--text-primary);
+}
+
+/* --- Bootstrap default badge-secondary --- */
+.dark-mode .badge.bg-secondary {
+  background: #2d3153 !important;
+  color: var(--text-secondary);
+}
+
+/* --- Headings & text that may not inherit --- */
+.dark-mode h1, .dark-mode h2, .dark-mode h3,
+.dark-mode h4, .dark-mode h5, .dark-mode h6 {
+  color: var(--text-primary);
+}
+.dark-mode p {
+  color: var(--text-primary);
+}
+.dark-mode small {
+  color: var(--text-secondary);
+}
+
+/* --- Spinner --- */
+.dark-mode .spinner-border {
+  color: white;
+}
+
 /* =============================================
    FOOTER
    ============================================= */
