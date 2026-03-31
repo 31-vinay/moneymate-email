@@ -689,6 +689,10 @@ main {
 .dark-mode .card {
   background: var(--bg-card);
   border-color: var(--border-color);
+  --bs-card-bg: #1a1d2e;
+  --bs-card-color: #e8eaf6;
+  --bs-card-border-color: rgba(162, 155, 254, 0.15);
+  --bs-card-cap-bg: transparent;
 }
 
 .dark-mode .card-header {
@@ -750,14 +754,10 @@ main {
   color: var(--text-primary);
 }
 
-.dark-mode .card {
-  --bs-card-bg: #1a1d2e;
-  --bs-card-color: #e8eaf6;
-  --bs-card-border-color: rgba(162, 155, 254, 0.15);
-  --bs-card-cap-bg: transparent;
-}
-
 .dark-mode .modal-content {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-color);
   --bs-modal-bg: #1a1d2e;
   --bs-modal-color: #e8eaf6;
   --bs-modal-border-color: rgba(162, 155, 254, 0.15);
@@ -816,12 +816,6 @@ main {
   filter: invert(1) grayscale(100%) brightness(200%);
 }
 
-/* --- Modals --- */
-.dark-mode .modal-content {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
 .dark-mode .modal-header,
 .dark-mode .modal-footer {
   border-color: var(--border-color);

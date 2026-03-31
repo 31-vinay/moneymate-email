@@ -45,13 +45,11 @@ admin = Admin(app, name="Finance Manager")
 app.config["SECRET_KEY"] = os.environ.get("SESSION_SECRET", "your-secret-key-change-in-production")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///finance.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000
 
 db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
-
-# Add admin panel
-
 
 # Protect admin views with login
 class AdminModelView(ModelView):
