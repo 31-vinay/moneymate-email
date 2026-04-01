@@ -1022,12 +1022,6 @@ def settings():
     return render_template("settings.html")
 
 
-@app.route("/made-by")
-@login_required
-def made_by():
-    return render_template("made_by.html")
-
-
 @app.route("/change-email", methods=["POST"])
 @login_required
 def change_email():
