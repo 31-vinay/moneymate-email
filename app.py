@@ -739,24 +739,69 @@ def get_spending_suggestions(user_id, goal):
 
 
 def run_monthly_reset(user):
-    """Clear non-subscription expenses and non-recurring income from previous months, keeping subscriptions and recurring salary."""
+    """Clear non-subscription expenses and non-recurring income from previous months,
+    keeping subscriptions and recurring salary. Carries any leftover balance into savings."""
     now = datetime.utcnow()
     last_reset = user.last_monthly_reset
 
     if last_reset is None:
         user.last_monthly_reset = now
         db.session.commit()
-        return False
+        return False, 0
 
     if now.year == last_reset.year and now.month == last_reset.month:
-        return False
+        return False, 0
 
-    # A new month has started — clear last month's non-subscription expenses
     prev_month_start = datetime(last_reset.year, last_reset.month, 1)
     if last_reset.month == 12:
         prev_month_end = datetime(last_reset.year + 1, 1, 1)
     else:
         prev_month_end = datetime(last_reset.year, last_reset.month + 1, 1)
+
+    # Calculate previous month totals BEFORE deletion
+    prev_income = db.session.query(func.sum(Income.amount)).filter(
+        Income.user_id == user.id,
+        Income.date_received >= prev_month_start,
+        Income.date_received < prev_month_end,
+    ).scalar() or 0
+
+    prev_expenses = db.session.query(func.sum(Expense.amount)).filter(
+        Expense.user_id == user.id,
+        Expense.date >= prev_month_start,
+        Expense.date < prev_month_end,
+    ).scalar() or 0
+
+    leftover = round(max(0, prev_income - prev_expenses), 2)
+    carried = 0
+
+    # Carry leftover balance into savings goals (or as income if no active goals)
+    if leftover > 0:
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+        active_goals = sorted(
+            [g for g in Goal.query.filter_by(user_id=user.id).all()
+             if g.saved_amount < g.target_amount],
+            key=lambda g: priority_order.get(g.priority, 1)
+        )
+        if active_goals:
+            total_monthly = sum(g.monthly_savings for g in active_goals)
+            for g in active_goals:
+                if total_monthly > 0:
+                    share = round(leftover * (g.monthly_savings / total_monthly), 2)
+                else:
+                    share = round(leftover / len(active_goals), 2)
+                g.saved_amount = round(min(g.target_amount, g.saved_amount + share), 2)
+            carried = leftover
+        else:
+            # No goals — carry it forward as an income entry this month
+            db.session.add(Income(
+                user_id=user.id,
+                source="Monthly Savings",
+                amount=leftover,
+                date_received=now,
+                description=f"Leftover balance from {last_reset.strftime('%B %Y')}",
+                is_recurring=False,
+            ))
+            carried = leftover
 
     # Delete non-subscription expenses from previous month
     Expense.query.filter(
@@ -776,7 +821,7 @@ def run_monthly_reset(user):
 
     user.last_monthly_reset = now
     db.session.commit()
-    return True
+    return True, carried
 
 
 def check_subscription_expiry(user_id):
@@ -1023,6 +1068,22 @@ def delete_account():
     return redirect(url_for("index"))
 
 
+@app.route("/reset-account", methods=["POST"])
+@login_required
+def reset_account():
+    current_password = request.form.get("current_password", "").strip()
+    if current_user.password != current_password:
+        flash("Incorrect password. Account data not reset.", "danger")
+        return redirect(url_for("settings"))
+    Income.query.filter_by(user_id=current_user.id).delete()
+    Expense.query.filter_by(user_id=current_user.id).delete()
+    Goal.query.filter_by(user_id=current_user.id).delete()
+    current_user.last_monthly_reset = None
+    db.session.commit()
+    flash("Your account data has been reset. Your account is still active.", "success")
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/request-account-info")
 @login_required
 def request_account_info():
@@ -1082,9 +1143,12 @@ def complete_tutorial():
 @login_required
 def dashboard():
     # Monthly auto-reset: clear previous month's non-subscription/non-recurring data
-    was_reset = run_monthly_reset(current_user)
+    was_reset, carried_savings = run_monthly_reset(current_user)
     if was_reset:
-        flash("A new month has started! Your dashboard has been reset. Subscriptions and recurring income are preserved.", "info")
+        msg = "A new month has started! Your dashboard has been reset. Subscriptions and recurring income are preserved."
+        if carried_savings > 0:
+            msg += f" ₹{carried_savings:,.2f} leftover balance was carried forward to your savings."
+        flash(msg, "info")
 
     # Check subscription expiry
     sub_alerts = check_subscription_expiry(current_user.id)
