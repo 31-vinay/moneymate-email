@@ -739,8 +739,8 @@ def get_spending_suggestions(user_id, goal):
 
 
 def run_monthly_reset(user):
-    """Clear non-subscription expenses and non-recurring income from previous months,
-    keeping subscriptions and recurring salary. Carries any leftover balance into savings."""
+    """Monthly rollover: carry recurring entries forward to the new month,
+    delete all old-month data, and carry leftover balance into savings."""
     now = datetime.utcnow()
     last_reset = user.last_monthly_reset
 
@@ -752,29 +752,85 @@ def run_monthly_reset(user):
     if now.year == last_reset.year and now.month == last_reset.month:
         return False, 0
 
+    # ── Save the reset timestamp FIRST so a mid-way failure can't re-trigger the reset ──
+    user.last_monthly_reset = now
+    db.session.commit()
+
     prev_month_start = datetime(last_reset.year, last_reset.month, 1)
     if last_reset.month == 12:
         prev_month_end = datetime(last_reset.year + 1, 1, 1)
     else:
         prev_month_end = datetime(last_reset.year, last_reset.month + 1, 1)
 
-    # Calculate previous month totals BEFORE deletion
-    prev_income = db.session.query(func.sum(Income.amount)).filter(
+    new_month_start = datetime(now.year, now.month, 1)
+
+    # ── Calculate previous month totals BEFORE touching anything ──
+    prev_income_total = db.session.query(func.sum(Income.amount)).filter(
         Income.user_id == user.id,
         Income.date_received >= prev_month_start,
         Income.date_received < prev_month_end,
     ).scalar() or 0
 
-    prev_expenses = db.session.query(func.sum(Expense.amount)).filter(
+    prev_expense_total = db.session.query(func.sum(Expense.amount)).filter(
         Expense.user_id == user.id,
         Expense.date >= prev_month_start,
         Expense.date < prev_month_end,
     ).scalar() or 0
 
-    leftover = round(max(0, prev_income - prev_expenses), 2)
-    carried = 0
+    leftover = round(max(0, prev_income_total - prev_expense_total), 2)
 
-    # Carry leftover balance into savings goals (or as income if no active goals)
+    # ── Roll recurring income forward into the new month ──
+    recurring_incomes = Income.query.filter(
+        Income.user_id == user.id,
+        Income.date_received >= prev_month_start,
+        Income.date_received < prev_month_end,
+        Income.is_recurring == True,
+    ).all()
+    for inc in recurring_incomes:
+        db.session.add(Income(
+            user_id=user.id,
+            source=inc.source,
+            amount=inc.amount,
+            date_received=new_month_start,
+            description=inc.description,
+            is_recurring=True,
+        ))
+
+    # ── Roll recurring subscription expenses forward into the new month ──
+    recurring_expenses = Expense.query.filter(
+        Expense.user_id == user.id,
+        Expense.date >= prev_month_start,
+        Expense.date < prev_month_end,
+        Expense.is_subscription == True,
+    ).all()
+    for exp in recurring_expenses:
+        db.session.add(Expense(
+            user_id=user.id,
+            category=exp.category,
+            amount=exp.amount,
+            date=new_month_start,
+            description=exp.description,
+            is_essential=exp.is_essential,
+            is_subscription=True,
+            sub_start_date=exp.sub_start_date,
+            sub_end_date=exp.sub_end_date,
+        ))
+
+    # ── Delete ALL previous month entries (old recurring copies no longer needed) ──
+    Expense.query.filter(
+        Expense.user_id == user.id,
+        Expense.date >= prev_month_start,
+        Expense.date < prev_month_end,
+    ).delete(synchronize_session=False)
+
+    Income.query.filter(
+        Income.user_id == user.id,
+        Income.date_received >= prev_month_start,
+        Income.date_received < prev_month_end,
+    ).delete(synchronize_session=False)
+
+    # ── Carry leftover balance into savings goals (or as income if no goals) ──
+    carried = 0
     if leftover > 0:
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
         active_goals = sorted(
@@ -785,14 +841,13 @@ def run_monthly_reset(user):
         if active_goals:
             total_monthly = sum(g.monthly_savings for g in active_goals)
             for g in active_goals:
-                if total_monthly > 0:
-                    share = round(leftover * (g.monthly_savings / total_monthly), 2)
-                else:
-                    share = round(leftover / len(active_goals), 2)
+                share = round(
+                    leftover * (g.monthly_savings / total_monthly) if total_monthly > 0
+                    else leftover / len(active_goals), 2
+                )
                 g.saved_amount = round(min(g.target_amount, g.saved_amount + share), 2)
             carried = leftover
         else:
-            # No goals — carry it forward as an income entry this month
             db.session.add(Income(
                 user_id=user.id,
                 source="Monthly Savings",
@@ -803,23 +858,6 @@ def run_monthly_reset(user):
             ))
             carried = leftover
 
-    # Delete non-subscription expenses from previous month
-    Expense.query.filter(
-        Expense.user_id == user.id,
-        Expense.date >= prev_month_start,
-        Expense.date < prev_month_end,
-        Expense.is_subscription == False,
-    ).delete()
-
-    # Delete non-recurring income from previous month
-    Income.query.filter(
-        Income.user_id == user.id,
-        Income.date_received >= prev_month_start,
-        Income.date_received < prev_month_end,
-        Income.is_recurring == False,
-    ).delete()
-
-    user.last_monthly_reset = now
     db.session.commit()
     return True, carried
 
