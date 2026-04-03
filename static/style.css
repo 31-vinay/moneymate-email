@@ -159,7 +159,7 @@ main {
 }
 
 .btn-logout {
-  background: rgba(255, 146, 77, 0.85);
+  background: rgba(214, 48, 49, 0.85);
   color: white !important;
   border-radius: var(--radius-pill);
   padding: 6px 18px;
@@ -170,9 +170,9 @@ main {
 }
 
 .btn-logout:hover {
-  background: #FF924D;
+  background: #d63031;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 146, 77,0.35);
+  box-shadow: 0 4px 12px rgba(214, 48, 49, 0.35);
 }
 
 .dark-toggle-btn {
