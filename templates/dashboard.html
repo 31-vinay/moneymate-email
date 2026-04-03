@@ -43,11 +43,11 @@
 
 <!-- Month-End Warning Alert (only when ≤10 days left AND shortfall predicted) -->
 {% if show_month_forecast_warning %}
-<div class="alert alert-danger alert-dismissible fade show mb-4 fade-in" role="alert" style="border-left: 5px solid #d63031; background: rgba(214,48,49,0.08);">
+<div class="alert alert-danger alert-dismissible fade show mb-4 fade-in" role="alert" style="border-left: 5px solid #FF924D; background: rgba(255, 146, 77,0.08);">
   <div class="d-flex align-items-start gap-3">
-    <i class="bi bi-exclamation-triangle-fill fs-4 mt-1" style="color:#d63031;flex-shrink:0;"></i>
+    <i class="bi bi-exclamation-triangle-fill fs-4 mt-1" style="color:#FF924D;flex-shrink:0;"></i>
     <div class="flex-grow-1">
-      <h6 class="alert-heading fw-bold mb-1" style="color:#d63031;">
+      <h6 class="alert-heading fw-bold mb-1" style="color:#FF924D;">
         Money Running Out Before Month-End!
       </h6>
       <p class="mb-2" style="font-size:0.9rem;">
@@ -235,9 +235,9 @@
         </div>
       </div>
       <div class="col-md-4">
-        <div class="p-3 rounded-3 h-100" style="background: {% if predicted_balance >= 0 %}rgba(0,184,148,0.07); border: 1px solid rgba(0,184,148,0.2){% else %}rgba(214,48,49,0.07); border: 1px solid rgba(214,48,49,0.2){% endif %};">
+        <div class="p-3 rounded-3 h-100" style="background: {% if predicted_balance >= 0 %}rgba(0,184,148,0.07); border: 1px solid rgba(0,184,148,0.2){% else %}rgba(255, 146, 77,0.07); border: 1px solid rgba(255, 146, 77,0.2){% endif %};">
           <div class="text-muted mb-1" style="font-size:0.8rem;"><i class="bi bi-wallet2 me-1"></i>Predicted Balance</div>
-          <div style="font-size:1.5rem;font-weight:700;color:{% if predicted_balance >= 0 %}#00b894{% else %}#d63031{% endif %};">
+          <div style="font-size:1.5rem;font-weight:700;color:{% if predicted_balance >= 0 %}#00b894{% else %}#FF924D{% endif %};">
             {% if predicted_balance >= 0 %}+{% endif %}₹{{ "%.0f"|format(predicted_balance) }}
           </div>
           <div class="text-muted" style="font-size:0.75rem;">Income minus projected spend</div>
@@ -251,9 +251,9 @@
           <div class="text-muted" style="font-size:0.8rem;">Finances look healthy for the rest of the month.</div>
         </div>
         {% else %}
-        <div class="p-3 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center" style="background: rgba(214,48,49,0.1); border: 2px solid #d63031;">
-          <i class="bi bi-x-circle-fill fs-2 mb-2" style="color:#d63031;"></i>
-          <div class="fw-bold" style="color:#d63031;">Shortfall Predicted</div>
+        <div class="p-3 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center" style="background: rgba(255, 146, 77,0.1); border: 2px solid #FF924D;">
+          <i class="bi bi-x-circle-fill fs-2 mb-2" style="color:#FF924D;"></i>
+          <div class="fw-bold" style="color:#FF924D;">Shortfall Predicted</div>
           <div class="text-muted" style="font-size:0.8rem;">You may run out of money before month-end.</div>
         </div>
         {% endif %}

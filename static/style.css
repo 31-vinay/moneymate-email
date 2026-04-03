@@ -6,13 +6,13 @@
   --brand-primary: #008080;
   --brand-secondary: #80BFBF;
   --brand-accent: #00b894;
-  --brand-danger: #d63031;
+  --brand-danger: #FF924D;
   --brand-warning: #f39c12;
   --brand-info: #0984e3;
 
   --gradient-brand: linear-gradient(135deg, #008080 0%, #006666 100%);
   --gradient-green: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
-  --gradient-red: linear-gradient(135deg, #d63031 0%, #fd79a8 100%);
+  --gradient-red: linear-gradient(135deg, #FF924D 0%, #FFB380 100%);
   --gradient-orange: linear-gradient(135deg, #f39c12 0%, #fdcb6e 100%);
   --gradient-blue: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
 
@@ -159,7 +159,7 @@ main {
 }
 
 .btn-logout {
-  background: rgba(214, 48, 49, 0.85);
+  background: rgba(255, 146, 77, 0.85);
   color: white !important;
   border-radius: var(--radius-pill);
   padding: 6px 18px;
@@ -170,9 +170,9 @@ main {
 }
 
 .btn-logout:hover {
-  background: #d63031;
+  background: #FF924D;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(214,48,49,0.35);
+  box-shadow: 0 4px 12px rgba(255, 146, 77,0.35);
 }
 
 .dark-toggle-btn {
@@ -370,12 +370,12 @@ main {
 .btn-danger {
   background: var(--gradient-red);
   color: white;
-  box-shadow: 0 4px 12px rgba(214, 48, 49, 0.25);
+  box-shadow: 0 4px 12px rgba(255, 146, 77, 0.25);
 }
 
 .btn-danger:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(214, 48, 49, 0.35);
+  box-shadow: 0 8px 20px rgba(255, 146, 77, 0.35);
   color: white;
   background: var(--gradient-red);
 }
@@ -807,7 +807,7 @@ main {
   color: #55efc4;
 }
 .dark-mode .alert-danger {
-  background: rgba(214, 48, 49, 0.18);
+  background: rgba(255, 146, 77, 0.18);
   color: #ff7675;
 }
 
@@ -841,7 +841,7 @@ main {
   background: transparent;
 }
 .dark-mode .btn-outline-danger:hover {
-  background: rgba(214, 48, 49, 0.15);
+  background: rgba(255, 146, 77, 0.15);
   color: #ff7675;
 }
 

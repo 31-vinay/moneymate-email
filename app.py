@@ -1882,7 +1882,7 @@ def chart_expense_distribution(categories):
     labels = list(categories.keys())
     values = list(categories.values())
     colors = ['#008080','#00CEC9','#FD79A8','#FDCB6E','#55EFC4',
-              '#E17055','#0984E3','#7dd3fc','#00B894','#74B9FF']
+              '#FF924D','#0984E3','#7dd3fc','#00B894','#74B9FF']
     fig, ax = plt.subplots(figsize=(5, 4))
     fig.patch.set_alpha(0)
     wedges, texts, autotexts = ax.pie(
@@ -1914,7 +1914,7 @@ def chart_income_vs_expense(monthly_inc, monthly_exp):
     w = 0.35
     bars1 = ax.bar([i - w/2 for i in x], inc_vals, width=w, color='#00b894', label='Income',
                    edgecolor='white', linewidth=1.2, zorder=3)
-    bars2 = ax.bar([i + w/2 for i in x], exp_vals, width=w, color='#e17055', label='Expense',
+    bars2 = ax.bar([i + w/2 for i in x], exp_vals, width=w, color='#FF924D', label='Expense',
                    edgecolor='white', linewidth=1.2, zorder=3)
     for bar in list(bars1) + list(bars2):
         if bar.get_height() > 0:
@@ -1973,7 +1973,7 @@ def chart_category_breakdown(categories):
     labels = [c[0] for c in sorted_cats]
     values = [c[1] for c in sorted_cats]
     colors = ['#008080','#0984E3','#00CEC9','#00b894','#55EFC4',
-              '#FDCB6E','#E17055','#FD79A8']
+              '#FDCB6E','#FF924D','#FD79A8']
     fig, ax = plt.subplots(figsize=(6, max(3.5, len(labels) * 0.5)))
     fig.patch.set_alpha(0)
     bars = ax.barh(labels[::-1], values[::-1], color=colors[:len(values)],

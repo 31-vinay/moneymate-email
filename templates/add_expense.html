@@ -4,7 +4,7 @@
 {% set uncategorized = expenses | selectattr('category', 'equalto', 'Uncategorized') | list %}
 {% if uncategorized %}
 <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-3 mb-4 rounded-4" role="alert" style="border:none;box-shadow:0 4px 16px rgba(253,203,110,0.18);">
-  <i class="bi bi-envelope-arrow-down fs-4 flex-shrink-0" style="color:#e17055;"></i>
+  <i class="bi bi-envelope-arrow-down fs-4 flex-shrink-0" style="color:#FF924D;"></i>
   <div>
     <strong>{{ uncategorized|length }} imported transaction{{ 's' if uncategorized|length != 1 }} need{{ '' if uncategorized|length != 1 else 's' }} categorising.</strong>
     They are highlighted below — click the <i class="bi bi-pencil"></i> edit button on each one to assign a category.
