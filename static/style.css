@@ -3,31 +3,31 @@
    ============================================= */
 
 :root {
-  --brand-primary: #6C5CE7;
-  --brand-secondary: #a29bfe;
+  --brand-primary: #0891b2;
+  --brand-secondary: #7dd3fc;
   --brand-accent: #00b894;
   --brand-danger: #d63031;
   --brand-warning: #f39c12;
   --brand-info: #0984e3;
 
-  --gradient-brand: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-brand: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
   --gradient-green: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
   --gradient-red: linear-gradient(135deg, #d63031 0%, #fd79a8 100%);
   --gradient-orange: linear-gradient(135deg, #f39c12 0%, #fdcb6e 100%);
   --gradient-blue: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
 
-  --bg-page: #f0f2ff;
+  --bg-page: #f0f7fa;
   --bg-card: rgba(255, 255, 255, 0.97);
   --bg-card-hover: #fff;
   --text-primary: #2d3436;
   --text-secondary: #636e72;
   --text-muted: #b2bec3;
-  --border-color: rgba(108, 92, 231, 0.12);
+  --border-color: rgba(8, 145, 178, 0.12);
 
-  --shadow-sm: 0 2px 12px rgba(108, 92, 231, 0.08);
-  --shadow-md: 0 8px 30px rgba(108, 92, 231, 0.12);
-  --shadow-lg: 0 20px 50px rgba(108, 92, 231, 0.18);
-  --shadow-hover: 0 15px 40px rgba(108, 92, 231, 0.22);
+  --shadow-sm: 0 2px 12px rgba(8, 145, 178, 0.08);
+  --shadow-md: 0 8px 30px rgba(8, 145, 178, 0.12);
+  --shadow-lg: 0 20px 50px rgba(8, 145, 178, 0.18);
+  --shadow-hover: 0 15px 40px rgba(8, 145, 178, 0.22);
 
   --radius-sm: 10px;
   --radius-md: 16px;
@@ -65,7 +65,7 @@ main {
   background: var(--gradient-brand);
   background-size: 200% 200%;
   animation: gradientMove 10s ease infinite;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 4px 20px rgba(8, 145, 178, 0.35);
   backdrop-filter: blur(12px);
   position: relative;
   z-index: 2100;
@@ -344,12 +344,12 @@ main {
 .btn-primary {
   background: var(--gradient-brand);
   color: white;
-  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+  box-shadow: 0 8px 20px rgba(8, 145, 178, 0.4);
   color: white;
   background: var(--gradient-brand);
 }
@@ -398,7 +398,7 @@ main {
 }
 
 .btn-outline-secondary:hover {
-  background: rgba(108, 92, 231, 0.06);
+  background: rgba(8, 145, 178, 0.06);
   border-color: var(--brand-secondary);
   color: var(--brand-primary);
 }
@@ -428,7 +428,7 @@ main {
 }
 
 .table thead th {
-  background: #f8f6ff;
+  background: #f0f9fb;
   color: var(--brand-primary);
   font-weight: 700;
   font-size: 0.78rem;
@@ -440,7 +440,7 @@ main {
 
 .table tbody td {
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgba(108, 92, 231, 0.06);
+  border-bottom: 1px solid rgba(8, 145, 178, 0.06);
   vertical-align: middle;
   color: var(--text-primary);
 }
@@ -450,7 +450,7 @@ main {
 }
 
 .table-hover tbody tr:hover {
-  background: rgba(108, 92, 231, 0.04);
+  background: rgba(8, 145, 178, 0.04);
 }
 
 /* =============================================
@@ -485,7 +485,7 @@ main {
 
 .form-control:focus, .form-select:focus {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
   outline: none;
 }
 
@@ -516,7 +516,7 @@ main {
    ============================================= */
 .progress {
   border-radius: var(--radius-pill);
-  background: rgba(108, 92, 231, 0.1);
+  background: rgba(8, 145, 178, 0.1);
   overflow: hidden;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
 }
@@ -545,7 +545,7 @@ main {
 .list-group-item {
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(108, 92, 231, 0.07);
+  border-bottom: 1px solid rgba(8, 145, 178, 0.07);
   padding: 0.75rem 0.25rem;
   color: var(--text-primary);
   font-size: 0.92rem;
@@ -618,67 +618,67 @@ main {
   --bg-card: #1a1d2e;
   --bg-card-hover: #1e2135;
   --text-primary: #e8eaf6;
-  --text-secondary: #9fa8da;
-  --text-muted: #5c6bc0;
-  --border-color: rgba(162, 155, 254, 0.15);
+  --text-secondary: #7dd3fc;
+  --text-muted: #0e7490;
+  --border-color: rgba(103, 232, 249, 0.15);
   --shadow-md: 0 8px 30px rgba(0,0,0,0.4);
   --shadow-hover: 0 15px 40px rgba(0,0,0,0.55);
 
   /* Bootstrap 5 CSS variable overrides — without these Bootstrap ignores our rules */
   --bs-body-color: #e8eaf6;
   --bs-body-bg: #0f1117;
-  --bs-border-color: rgba(162, 155, 254, 0.15);
+  --bs-border-color: rgba(103, 232, 249, 0.15);
 
   /* Cards */
   --bs-card-bg: #1a1d2e;
   --bs-card-color: #e8eaf6;
-  --bs-card-border-color: rgba(162, 155, 254, 0.15);
+  --bs-card-border-color: rgba(103, 232, 249, 0.15);
   --bs-card-cap-bg: transparent;
 
   /* Tables */
   --bs-table-bg: transparent;
   --bs-table-color: #e8eaf6;
-  --bs-table-border-color: rgba(162, 155, 254, 0.08);
-  --bs-table-hover-bg: rgba(108, 92, 231, 0.08);
+  --bs-table-border-color: rgba(103, 232, 249, 0.08);
+  --bs-table-hover-bg: rgba(8, 145, 178, 0.08);
   --bs-table-hover-color: #e8eaf6;
   --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
   --bs-table-striped-color: #e8eaf6;
-  --bs-table-active-bg: rgba(108, 92, 231, 0.12);
+  --bs-table-active-bg: rgba(8, 145, 178, 0.12);
   --bs-table-active-color: #e8eaf6;
 
   /* List groups */
   --bs-list-group-bg: transparent;
   --bs-list-group-color: #e8eaf6;
-  --bs-list-group-border-color: rgba(162, 155, 254, 0.12);
-  --bs-list-group-hover-bg: rgba(108, 92, 231, 0.08);
-  --bs-list-group-action-color: #9fa8da;
+  --bs-list-group-border-color: rgba(103, 232, 249, 0.12);
+  --bs-list-group-hover-bg: rgba(8, 145, 178, 0.08);
+  --bs-list-group-action-color: #7dd3fc;
   --bs-list-group-action-hover-color: #e8eaf6;
-  --bs-list-group-action-active-bg: rgba(108, 92, 231, 0.12);
-  --bs-list-group-disabled-color: #5c6bc0;
+  --bs-list-group-action-active-bg: rgba(8, 145, 178, 0.12);
+  --bs-list-group-disabled-color: #0e7490;
   --bs-list-group-disabled-bg: transparent;
   --bs-list-group-active-color: #fff;
-  --bs-list-group-active-bg: #6C5CE7;
-  --bs-list-group-active-border-color: #6C5CE7;
+  --bs-list-group-active-bg: #0891b2;
+  --bs-list-group-active-border-color: #0891b2;
 
   /* Modals */
   --bs-modal-bg: #1a1d2e;
   --bs-modal-color: #e8eaf6;
-  --bs-modal-border-color: rgba(162, 155, 254, 0.15);
-  --bs-modal-header-border-color: rgba(162, 155, 254, 0.12);
-  --bs-modal-footer-border-color: rgba(162, 155, 254, 0.12);
+  --bs-modal-border-color: rgba(103, 232, 249, 0.15);
+  --bs-modal-header-border-color: rgba(103, 232, 249, 0.12);
+  --bs-modal-footer-border-color: rgba(103, 232, 249, 0.12);
 
   /* Forms */
   --bs-form-control-bg: #1e2135;
   --bs-form-control-color: #e8eaf6;
-  --bs-form-control-border-color: rgba(162, 155, 254, 0.2);
+  --bs-form-control-border-color: rgba(103, 232, 249, 0.2);
 
   /* Dropdowns */
   --bs-dropdown-bg: #1a1d2e;
   --bs-dropdown-color: #e8eaf6;
-  --bs-dropdown-border-color: rgba(162, 155, 254, 0.15);
+  --bs-dropdown-border-color: rgba(103, 232, 249, 0.15);
   --bs-dropdown-link-color: #e8eaf6;
   --bs-dropdown-link-hover-color: #fff;
-  --bs-dropdown-link-hover-bg: rgba(108, 92, 231, 0.12);
+  --bs-dropdown-link-hover-bg: rgba(8, 145, 178, 0.12);
 }
 
 .dark-mode body {
@@ -691,12 +691,12 @@ main {
   border-color: var(--border-color);
   --bs-card-bg: #1a1d2e;
   --bs-card-color: #e8eaf6;
-  --bs-card-border-color: rgba(162, 155, 254, 0.15);
+  --bs-card-border-color: rgba(103, 232, 249, 0.15);
   --bs-card-cap-bg: transparent;
 }
 
 .dark-mode .card-header {
-  background: linear-gradient(135deg, #3d348b 0%, #5a3d8a 100%);
+  background: linear-gradient(135deg, #164e63 0%, #0e7490 100%);
 }
 
 .dark-mode .table thead th {
@@ -706,11 +706,11 @@ main {
 
 .dark-mode .table tbody td {
   color: var(--text-primary);
-  border-bottom-color: rgba(162, 155, 254, 0.08);
+  border-bottom-color: rgba(103, 232, 249, 0.08);
 }
 
 .dark-mode .table-hover tbody tr:hover {
-  background: rgba(162, 155, 254, 0.07);
+  background: rgba(103, 232, 249, 0.07);
 }
 
 .dark-mode .form-control, .dark-mode .form-select {
@@ -730,24 +730,24 @@ main {
 .dark-mode .list-group {
   --bs-list-group-bg: transparent;
   --bs-list-group-color: #e8eaf6;
-  --bs-list-group-border-color: rgba(162, 155, 254, 0.12);
-  --bs-list-group-hover-bg: rgba(108, 92, 231, 0.08);
-  --bs-list-group-action-color: #9fa8da;
+  --bs-list-group-border-color: rgba(103, 232, 249, 0.12);
+  --bs-list-group-hover-bg: rgba(8, 145, 178, 0.08);
+  --bs-list-group-action-color: #7dd3fc;
   --bs-list-group-action-hover-color: #e8eaf6;
-  --bs-list-group-disabled-color: #5c6bc0;
+  --bs-list-group-disabled-color: #0e7490;
   --bs-list-group-disabled-bg: transparent;
 }
 
 .dark-mode .list-group-item {
   color: var(--text-primary);
-  border-bottom-color: rgba(162, 155, 254, 0.08);
+  border-bottom-color: rgba(103, 232, 249, 0.08);
 }
 
 .dark-mode .table {
   --bs-table-bg: transparent;
   --bs-table-color: #e8eaf6;
-  --bs-table-border-color: rgba(162, 155, 254, 0.08);
-  --bs-table-hover-bg: rgba(108, 92, 231, 0.08);
+  --bs-table-border-color: rgba(103, 232, 249, 0.08);
+  --bs-table-hover-bg: rgba(8, 145, 178, 0.08);
   --bs-table-hover-color: #e8eaf6;
   --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
   --bs-table-striped-color: #e8eaf6;
@@ -760,9 +760,9 @@ main {
   border-color: var(--border-color);
   --bs-modal-bg: #1a1d2e;
   --bs-modal-color: #e8eaf6;
-  --bs-modal-border-color: rgba(162, 155, 254, 0.15);
-  --bs-modal-header-border-color: rgba(162, 155, 254, 0.12);
-  --bs-modal-footer-border-color: rgba(162, 155, 254, 0.12);
+  --bs-modal-border-color: rgba(103, 232, 249, 0.15);
+  --bs-modal-header-border-color: rgba(103, 232, 249, 0.12);
+  --bs-modal-footer-border-color: rgba(103, 232, 249, 0.12);
 }
 
 .dark-mode .text-muted {
@@ -770,7 +770,7 @@ main {
 }
 
 .dark-mode .progress {
-  background: rgba(162, 155, 254, 0.15);
+  background: rgba(8, 145, 178, 0.15);
 }
 
 .dark-mode .section-title {
@@ -783,7 +783,7 @@ main {
 }
 
 .dark-mode .btn-outline-secondary:hover {
-  background: rgba(162, 155, 254, 0.1);
+  background: rgba(8, 145, 178, 0.1);
   color: var(--brand-secondary);
 }
 
@@ -831,7 +831,7 @@ main {
   background: transparent;
 }
 .dark-mode .btn-outline-primary:hover {
-  background: rgba(162, 155, 254, 0.15);
+  background: rgba(8, 145, 178, 0.15);
   color: white;
   border-color: var(--brand-secondary);
 }
@@ -869,7 +869,7 @@ main {
   border-color: var(--border-color);
 }
 .dark-mode .input-group-text {
-  background: linear-gradient(135deg, #3d348b 0%, #5a3d8a 100%);
+  background: linear-gradient(135deg, #164e63 0%, #0e7490 100%);
   color: white;
   border-color: var(--border-color);
 }
@@ -889,13 +889,13 @@ main {
   border-color: var(--border-color);
 }
 .dark-mode .numpad-btn:hover {
-  background: rgba(108, 92, 231, 0.2);
+  background: rgba(8, 145, 178, 0.2);
 }
 
 /* --- Subscriptions/goal inline panels --- */
 .dark-mode .p-3.rounded-3[style*="background: rgba(0,184,148"] ,
 .dark-mode .p-3.rounded-3[style*="background: rgba(243,156,18"],
-.dark-mode .p-3.rounded-3[style*="background: rgba(108,92,231"] {
+.dark-mode .p-3.rounded-3[style*="background: rgba(8,145,178"] {
   color: var(--text-primary);
 }
 
@@ -982,7 +982,7 @@ footer p {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 24px rgba(108, 92, 231, 0.45);
+  box-shadow: 0 6px 24px rgba(8, 145, 178, 0.45);
   cursor: pointer;
   z-index: 3000;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -990,7 +990,7 @@ footer p {
 
 .help-fab:hover {
   transform: scale(1.1);
-  box-shadow: 0 10px 32px rgba(108, 92, 231, 0.55);
+  box-shadow: 0 10px 32px rgba(8, 145, 178, 0.55);
 }
 
 .help-overlay {
@@ -1014,7 +1014,7 @@ footer p {
   max-width: 95vw;
   height: 100vh;
   background: var(--bg-card);
-  box-shadow: -8px 0 40px rgba(108, 92, 231, 0.18);
+  box-shadow: -8px 0 40px rgba(8, 145, 178, 0.18);
   z-index: 3002;
   display: flex;
   flex-direction: column;
@@ -1037,7 +1037,7 @@ footer p {
 }
 
 .help-close-btn {
-  background: rgba(108,92,231,0.08);
+  background: rgba(8,145,178,0.08);
   border: none;
   color: var(--text-secondary);
   width: 34px;
@@ -1052,7 +1052,7 @@ footer p {
 }
 
 .help-close-btn:hover {
-  background: rgba(108,92,231,0.15);
+  background: rgba(8,145,178,0.15);
   color: var(--text-primary);
 }
 
@@ -1091,7 +1091,7 @@ footer p {
 }
 
 .help-tip {
-  background: rgba(108,92,231,0.06);
+  background: rgba(8,145,178,0.06);
   border-left: 3px solid var(--brand-primary);
   border-radius: 0 8px 8px 0;
   padding: 8px 12px;
@@ -1135,7 +1135,7 @@ footer p {
 }
 
 .dark-mode .help-tip {
-  background: rgba(108,92,231,0.12);
+  background: rgba(8,145,178,0.12);
 }
 
 /* =============================================
