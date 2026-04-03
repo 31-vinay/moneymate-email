@@ -446,7 +446,7 @@
 <script>
 (function() {
   var toggle = document.getElementById('darkModeToggle');
-  if (toggle) toggle.checked = document.body.classList.contains('dark-mode');
+  if (toggle) toggle.checked = localStorage.getItem('darkMode') === 'true';
 })();
 
 function copyInviteLink() {
