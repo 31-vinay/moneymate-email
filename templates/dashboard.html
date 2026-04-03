@@ -198,17 +198,17 @@
 
       <!-- Savings & Debt (20%) -->
       <div class="col-md-4">
-        <div class="p-3 rounded-3 h-100" style="background: rgba(161, 215, 214,0.07); border: 1px solid rgba(161, 215, 214,0.2);">
+        <div class="p-3 rounded-3 h-100" style="background: rgba(121, 187, 195,0.07); border: 1px solid rgba(121, 187, 195,0.2);">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold" style="color:#A1D7D6;"><i class="bi bi-piggy-bank-fill me-1"></i>Savings &amp; Debt <span class="text-muted fw-normal" style="font-size:0.8rem;">(20%)</span></span>
-            <span class="badge" style="background:#A1D7D6;">Allocated</span>
+            <span class="fw-bold" style="color:#79BBC3;"><i class="bi bi-piggy-bank-fill me-1"></i>Savings &amp; Debt <span class="text-muted fw-normal" style="font-size:0.8rem;">(20%)</span></span>
+            <span class="badge" style="background:#79BBC3;">Allocated</span>
           </div>
           <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Recommended to save/repay:</div>
-          <div style="font-size:1.5rem;font-weight:700;color:#A1D7D6;">₹{{ "%.0f"|format(budget_savings) }}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#79BBC3;">₹{{ "%.0f"|format(budget_savings) }}</div>
           <div class="mt-2" style="font-size:0.85rem;color:var(--text-muted);">
-            Total saved across all goals: <strong style="color:#A1D7D6;">₹{{ "%.0f"|format(total_savings) }}</strong>
+            Total saved across all goals: <strong style="color:#79BBC3;">₹{{ "%.0f"|format(total_savings) }}</strong>
           </div>
-          <a href="{{ url_for('goals') }}" class="btn btn-sm mt-2" style="background:#A1D7D6;color:#fff;font-size:0.8rem;">
+          <a href="{{ url_for('goals') }}" class="btn btn-sm mt-2" style="background:#79BBC3;color:#fff;font-size:0.8rem;">
             <i class="bi bi-bullseye me-1"></i>View Goals
           </a>
         </div>
@@ -264,7 +264,7 @@
 
 <!-- Goal Suggestions by Priority -->
 {% if goal_suggestions %}
-<div class="card mb-4 fade-in fade-in-delay-1" style="border: 1px solid rgba(161, 215, 214,0.25);">
+<div class="card mb-4 fade-in fade-in-delay-1" style="border: 1px solid rgba(121, 187, 195,0.25);">
   <div class="card-header d-flex align-items-center justify-content-between">
     <span><i class="bi bi-lightbulb-fill me-2" style="color:#f39c12;"></i>Where to Put Your Savings &amp; Extra Money</span>
     <span class="badge bg-secondary" style="font-size:0.75rem;">Sorted by priority</span>
@@ -274,17 +274,17 @@
     <div class="row g-2">
       {% for sg in goal_suggestions %}
       <div class="col-md-4">
-        <div class="p-3 rounded-3 h-100" style="background:rgba(161, 215, 214,0.06);border:1px solid rgba(161, 215, 214,0.2);">
+        <div class="p-3 rounded-3 h-100" style="background:rgba(121, 187, 195,0.06);border:1px solid rgba(121, 187, 195,0.2);">
           <div class="d-flex align-items-center gap-2 mb-2">
-            <span style="font-size:1rem;font-weight:800;color:#A1D7D6;min-width:28px;">#{{ sg.priority }}</span>
+            <span style="font-size:1rem;font-weight:800;color:#79BBC3;min-width:28px;">#{{ sg.priority }}</span>
             <span style="font-weight:600;font-size:0.88rem;">{{ sg.name }}</span>
           </div>
-          <div style="font-size:1.1rem;font-weight:700;color:#A1D7D6;">
+          <div style="font-size:1.1rem;font-weight:700;color:#79BBC3;">
             ₹{{ "%.0f"|format(sg.suggested) }}
           </div>
           <div style="font-size:0.75rem;color:var(--text-muted);">suggested this month</div>
           <div style="font-size:0.75rem;color:var(--text-muted);" class="mt-1">₹{{ "%.0f"|format(sg.remaining) }} still needed</div>
-          <a href="{{ url_for('goal_detail', id=sg.id) }}" class="btn btn-sm mt-2" style="font-size:0.75rem;padding:2px 10px;background:#A1D7D6;color:#fff;">
+          <a href="{{ url_for('goal_detail', id=sg.id) }}" class="btn btn-sm mt-2" style="font-size:0.75rem;padding:2px 10px;background:#79BBC3;color:#fff;">
             Add to this goal
           </a>
         </div>
@@ -437,7 +437,7 @@
 </div>
 
 <!-- View Full Analysis -->
-<div class="card mb-4 fade-in" style="border:1px solid rgba(161, 215, 214,0.2);background:rgba(161, 215, 214,0.04);">
+<div class="card mb-4 fade-in" style="border:1px solid rgba(121, 187, 195,0.2);background:rgba(121, 187, 195,0.04);">
   <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3 py-3">
     <div>
       <div class="fw-semibold mb-1" style="color:var(--brand-primary);">
