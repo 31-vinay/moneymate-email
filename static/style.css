@@ -472,6 +472,9 @@ main {
 
 .text-danger { color: #DD4C28 !important; }
 
+.badge-uncategorized { color: #b8860b; }
+.dark-mode .badge-uncategorized { color: #fdcb6e; }
+
 /* =============================================
    FORMS
    ============================================= */
@@ -621,7 +624,7 @@ main {
   --bg-card-hover: #1e2135;
   --text-primary: #e8eaf6;
   --text-secondary: #80BFBF;
-  --text-muted: #006666;
+  --text-muted: #7fa8a8;
   --border-color: rgba(103, 232, 249, 0.15);
   --shadow-md: 0 8px 30px rgba(0,0,0,0.4);
   --shadow-hover: 0 15px 40px rgba(0,0,0,0.55);

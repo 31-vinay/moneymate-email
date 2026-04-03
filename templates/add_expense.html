@@ -169,7 +169,7 @@
             <tr {% if exp.category == 'Uncategorized' %}style="background:rgba(253,203,110,0.08);border-left:3px solid #fdcb6e;"{% endif %}>
               <td style="font-size:0.88rem;">
                 {% if exp.category == 'Uncategorized' %}
-                  <span class="badge" style="background:rgba(253,203,110,0.25);color:#b8860b;font-size:0.78rem;">
+                  <span class="badge badge-uncategorized" style="background:rgba(253,203,110,0.25);font-size:0.78rem;">
                     <i class="bi bi-envelope-arrow-down me-1"></i>Uncategorized
                   </span>
                 {% else %}
@@ -194,7 +194,7 @@
               </td>
               <td>
                 {% if exp.category == 'Uncategorized' %}
-                  <span class="badge" style="background:rgba(253,203,110,0.2);color:#b8860b;">Pending</span>
+                  <span class="badge badge-uncategorized" style="background:rgba(253,203,110,0.2);">Pending</span>
                 {% else %}
                   <span class="badge {% if exp.is_essential %}bg-success{% else %}bg-warning{% endif %}">
                     {% if exp.is_essential %}Need{% else %}Want{% endif %}
