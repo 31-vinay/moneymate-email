@@ -470,6 +470,8 @@ main {
 .badge.bg-warning { background: var(--gradient-orange) !important; color: white !important; }
 .badge.bg-info    { background: var(--gradient-blue) !important; }
 
+.text-danger { color: #DD4C28 !important; }
+
 /* =============================================
    FORMS
    ============================================= */
