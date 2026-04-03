@@ -1881,7 +1881,7 @@ def chart_expense_distribution(categories):
         return None
     labels = list(categories.keys())
     values = list(categories.values())
-    colors = ['#0891b2','#00CEC9','#FD79A8','#FDCB6E','#55EFC4',
+    colors = ['#A1D7D6','#00CEC9','#FD79A8','#FDCB6E','#55EFC4',
               '#E17055','#0984E3','#7dd3fc','#00B894','#74B9FF']
     fig, ax = plt.subplots(figsize=(5, 4))
     fig.patch.set_alpha(0)
@@ -1944,13 +1944,13 @@ def chart_monthly_trend(monthly_spending):
     values = list(monthly_spending.values())
     fig, ax = plt.subplots(figsize=(7, 3.8))
     fig.patch.set_alpha(0)
-    ax.fill_between(months, values, alpha=0.12, color='#0891b2', zorder=1)
-    ax.plot(months, values, color='#0891b2', linewidth=2.5, marker='o',
-            markersize=7, markerfacecolor='white', markeredgecolor='#0891b2',
+    ax.fill_between(months, values, alpha=0.12, color='#A1D7D6', zorder=1)
+    ax.plot(months, values, color='#A1D7D6', linewidth=2.5, marker='o',
+            markersize=7, markerfacecolor='white', markeredgecolor='#A1D7D6',
             markeredgewidth=2, zorder=2)
     for i, (m, v) in enumerate(zip(months, values)):
         ax.text(i, v + max(values) * 0.03, f'₹{v:,.0f}',
-                ha='center', va='bottom', fontsize=8, color='#0891b2', fontweight='bold')
+                ha='center', va='bottom', fontsize=8, color='#A1D7D6', fontweight='bold')
     ax.set_xticks(range(len(months)))
     ax.set_xticklabels(months, fontsize=9)
     ax.tick_params(axis='y', labelsize=8)
@@ -1972,7 +1972,7 @@ def chart_category_breakdown(categories):
     sorted_cats = sorted(categories.items(), key=lambda x: x[1], reverse=True)[:8]
     labels = [c[0] for c in sorted_cats]
     values = [c[1] for c in sorted_cats]
-    colors = ['#0891b2','#0984E3','#00CEC9','#00b894','#55EFC4',
+    colors = ['#A1D7D6','#0984E3','#00CEC9','#00b894','#55EFC4',
               '#FDCB6E','#E17055','#FD79A8']
     fig, ax = plt.subplots(figsize=(6, max(3.5, len(labels) * 0.5)))
     fig.patch.set_alpha(0)
