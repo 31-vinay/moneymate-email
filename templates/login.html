@@ -8,10 +8,10 @@
 .auth-card {
   width: 100%; max-width: 440px;
   border-radius: 24px; overflow: hidden;
-  box-shadow: 0 20px 60px rgba(121, 187, 195,0.2); border: none;
+  box-shadow: 0 20px 60px rgba(0, 128, 128,0.2); border: none;
 }
 .auth-header {
-  background: linear-gradient(135deg, #79BBC3 0%, #4E9AA4 100%);
+  background: linear-gradient(135deg, #008080 0%, #006666 100%);
   color: white; padding: 2.5rem 2rem 2rem; text-align: center;
 }
 .auth-header .auth-icon {
@@ -27,15 +27,15 @@
 .btn-auth {
   width: 100%; padding: 0.75rem; border-radius: 50px;
   font-size: 1rem; font-weight: 700;
-  background: linear-gradient(135deg, #79BBC3, #4E9AA4);
+  background: linear-gradient(135deg, #008080, #006666);
   color: white; border: none; transition: all 0.28s;
-  box-shadow: 0 6px 20px rgba(121, 187, 195,0.3);
+  box-shadow: 0 6px 20px rgba(0, 128, 128,0.3);
 }
-.btn-auth:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(121, 187, 195,0.4); color: white; }
+.btn-auth:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0, 128, 128,0.4); color: white; }
 .auth-divider {
   text-align: center; font-size: 0.88rem; color: #636e72; margin-top: 1.25rem;
 }
-.auth-divider a { color: #79BBC3; font-weight: 700; text-decoration: none; }
+.auth-divider a { color: #008080; font-weight: 700; text-decoration: none; }
 .auth-divider a:hover { text-decoration: underline; }
 
 /* MPIN numpad */
@@ -44,7 +44,7 @@
 }
 .pin-dot {
   width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid rgba(121, 187, 195,0.4); background: transparent; transition: all 0.2s;
+  border: 2px solid rgba(0, 128, 128,0.4); background: transparent; transition: all 0.2s;
 }
 .pin-dot.filled {
   background: var(--brand-primary); border-color: var(--brand-primary); transform: scale(1.15);
@@ -59,15 +59,15 @@
   cursor: pointer; transition: all 0.15s;
   display: flex; align-items: center; justify-content: center;
 }
-.numpad-btn:hover { background: rgba(121, 187, 195,0.1); border-color: var(--brand-primary); color: var(--brand-primary); }
+.numpad-btn:hover { background: rgba(0, 128, 128,0.1); border-color: var(--brand-primary); color: var(--brand-primary); }
 .numpad-btn:active { transform: scale(0.9); }
 .numpad-btn.backspace { font-size: 1rem; }
 .numpad-btn.empty-btn { visibility: hidden; }
 .mpin-user-chip {
   display: flex; align-items: center; gap: 10px;
-  background: rgba(121, 187, 195,0.07); border-radius: 50px;
+  background: rgba(0, 128, 128,0.07); border-radius: 50px;
   padding: 8px 14px 8px 10px; margin-bottom: 22px; cursor: pointer;
-  border: 1.5px solid rgba(121, 187, 195,0.15); transition: border 0.2s;
+  border: 1.5px solid rgba(0, 128, 128,0.15); transition: border 0.2s;
 }
 .mpin-user-chip:hover { border-color: var(--brand-primary); }
 .mpin-user-chip .avatar {
