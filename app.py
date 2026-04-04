@@ -28,6 +28,9 @@ import email as email_lib
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 import re
+import csv
+import pdfplumber
+import openpyxl
 import ssl
 import matplotlib
 matplotlib.use('Agg')
@@ -2090,6 +2093,188 @@ def analysis():
 
 
 # ─────────────────────────────────────────────────────────────
+#  Bank Statement Parser
+# ─────────────────────────────────────────────────────────────
+
+_DATE_FMTS = ["%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y",
+              "%Y-%m-%d", "%m/%d/%Y", "%d %b %Y", "%d %b %y",
+              "%d-%b-%Y", "%d-%b-%y", "%d/%b/%Y", "%d/%b/%y"]
+
+def _parse_date(s):
+    s = s.strip()
+    for fmt in _DATE_FMTS:
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+def _clean_amount(s):
+    s = re.sub(r"[₹,\s]", "", str(s)).strip()
+    try:
+        return float(s) if s else None
+    except ValueError:
+        return None
+
+def _make_txn(date_obj, desc, amount, txn_type):
+    return {
+        "date": date_obj.strftime("%Y-%m-%d"),
+        "description": desc.strip()[:200],
+        "amount": round(amount, 2),
+        "type": txn_type,
+        "sub_cat": "Bank Import",
+        "main_cat": "Other Expenses" if txn_type == "expense" else "Other Income",
+        "subject": desc.strip()[:200],
+    }
+
+def _detect_columns(headers):
+    """Return (date_col, desc_col, debit_col, credit_col) indices or None."""
+    h = [str(x).lower().strip() for x in headers]
+    date_kw   = ["date", "txn date", "value date", "transaction date", "posting date"]
+    desc_kw   = ["description", "narration", "particulars", "remarks", "details", "transaction remarks", "transaction details"]
+    debit_kw  = ["debit", "withdrawal", "dr", "debit amount", "withdrawal amount", "amount (dr)"]
+    credit_kw = ["credit", "deposit", "cr", "credit amount", "deposit amount", "amount (cr)"]
+    amount_kw = ["amount", "net amount"]
+
+    def find(kws):
+        for k in kws:
+            for i, hh in enumerate(h):
+                if k in hh:
+                    return i
+        return None
+
+    di = find(date_kw)
+    ni = find(desc_kw)
+    dbi = find(debit_kw)
+    cri = find(credit_kw)
+    ami = find(amount_kw) if dbi is None else None
+    if di is None or ni is None:
+        return None
+    return di, ni, dbi, cri, ami
+
+def _rows_to_txns(rows, header_idx):
+    headers = rows[header_idx]
+    result  = _detect_columns(headers)
+    if result is None:
+        return []
+    di, ni, dbi, cri, ami = result
+    txns = []
+    for row in rows[header_idx + 1:]:
+        if len(row) <= max(x for x in [di, ni, dbi, cri, ami] if x is not None):
+            continue
+        date_val = _parse_date(str(row[di]))
+        if date_val is None:
+            continue
+        desc = str(row[ni]).strip()
+        if not desc or desc.lower() in ("", "nan", "none"):
+            continue
+        debit  = _clean_amount(row[dbi]) if dbi is not None and dbi < len(row) else None
+        credit = _clean_amount(row[cri]) if cri is not None and cri < len(row) else None
+        amount = _clean_amount(row[ami]) if ami is not None and ami < len(row) else None
+        if debit and debit > 0:
+            txns.append(_make_txn(date_val, desc, debit, "expense"))
+        if credit and credit > 0:
+            txns.append(_make_txn(date_val, desc, credit, "income"))
+        if amount and dbi is None and cri is None:
+            t = "income" if amount > 0 else "expense"
+            txns.append(_make_txn(date_val, desc, abs(amount), t))
+    return txns
+
+def parse_bank_statement_csv(content_bytes):
+    text = content_bytes.decode("utf-8-sig", errors="replace")
+    reader = csv.reader(io.StringIO(text))
+    rows = [r for r in reader if any(c.strip() for c in r)]
+    for i, row in enumerate(rows):
+        if _detect_columns(row):
+            return _rows_to_txns(rows, i)
+    return []
+
+def parse_bank_statement_excel(content_bytes):
+    wb = openpyxl.load_workbook(io.BytesIO(content_bytes), data_only=True)
+    ws = wb.active
+    rows = []
+    for row in ws.iter_rows(values_only=True):
+        cells = [str(c) if c is not None else "" for c in row]
+        if any(c.strip() for c in cells):
+            rows.append(cells)
+    for i, row in enumerate(rows):
+        if _detect_columns(row):
+            return _rows_to_txns(rows, i)
+    return []
+
+def parse_bank_statement_pdf(content_bytes):
+    DATE_RE = re.compile(
+        r'\b(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|\d{1,2}[/\-][A-Za-z]{3}[/\-]\d{2,4})\b'
+    )
+    AMOUNT_RE = re.compile(r'(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)')
+    txns = []
+    with pdfplumber.open(io.BytesIO(content_bytes)) as pdf:
+        for page in pdf.pages:
+            # Try table extraction first
+            tables = page.extract_tables()
+            for table in tables:
+                if not table:
+                    continue
+                rows = [[str(c) if c else "" for c in row] for row in table]
+                for i, row in enumerate(rows):
+                    if _detect_columns(row):
+                        txns.extend(_rows_to_txns(rows, i))
+                        break
+            if txns:
+                continue
+            # Fallback: line-by-line text parsing
+            text = page.extract_text() or ""
+            for line in text.splitlines():
+                line = line.strip()
+                dates = DATE_RE.findall(line)
+                if not dates:
+                    continue
+                date_obj = _parse_date(dates[0])
+                if not date_obj:
+                    continue
+                amounts = AMOUNT_RE.findall(line)
+                if not amounts:
+                    continue
+                # Remove date strings from line to get description
+                desc = DATE_RE.sub("", line)
+                for a in amounts:
+                    desc = desc.replace(a, "")
+                desc = re.sub(r'\s+', ' ', desc).strip(" ,.-/")
+                if not desc:
+                    desc = "Bank transaction"
+                # Last amount is usually balance, second-last is txn amount
+                if len(amounts) >= 2:
+                    amt = _clean_amount(amounts[-2])
+                else:
+                    amt = _clean_amount(amounts[-1])
+                if amt and amt > 0:
+                    # Heuristic: look for Dr/Cr keywords
+                    low = line.lower()
+                    if re.search(r'\bcr\b|\bcredit\b|\bdeposit\b', low):
+                        txns.append(_make_txn(date_obj, desc, amt, "income"))
+                    else:
+                        txns.append(_make_txn(date_obj, desc, amt, "expense"))
+    seen = set()
+    unique = []
+    for t in txns:
+        key = (t["date"], t["amount"], t["type"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(t)
+    return unique
+
+def parse_bank_statement(file_bytes, filename):
+    ext = filename.rsplit(".", 1)[-1].lower()
+    if ext == "pdf":
+        return parse_bank_statement_pdf(file_bytes)
+    elif ext in ("xlsx", "xls"):
+        return parse_bank_statement_excel(file_bytes)
+    elif ext == "csv":
+        return parse_bank_statement_csv(file_bytes)
+    return []
+
+
+# ─────────────────────────────────────────────────────────────
 #  Email Import Routes
 # ─────────────────────────────────────────────────────────────
 
@@ -2172,6 +2357,70 @@ def email_import_do():
                 inc = Income(
                     user_id=current_user.id,
                     source=source,
+                    amount=amount,
+                    date_received=txn_date,
+                    description=desc,
+                )
+                db.session.add(inc)
+            else:
+                exp = Expense(
+                    user_id=current_user.id,
+                    category="Uncategorized",
+                    amount=amount,
+                    date=txn_date,
+                    description=desc,
+                    is_essential=False,
+                    is_subscription=False,
+                )
+                db.session.add(exp)
+            imported_count += 1
+        except Exception:
+            continue
+    db.session.commit()
+    return jsonify({"success": True, "imported": imported_count})
+
+
+# ─────────────────────────────────────────────────────────────
+#  Bank Statement Routes
+# ─────────────────────────────────────────────────────────────
+
+@app.route("/bank-statement/upload", methods=["POST"])
+@login_required
+def bank_statement_upload():
+    if "file" not in request.files:
+        return jsonify({"success": False, "message": "No file uploaded."})
+    f = request.files["file"]
+    filename = f.filename or ""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in ("pdf", "xlsx", "xls", "csv"):
+        return jsonify({"success": False, "message": "Unsupported file type. Please upload a PDF, Excel (.xlsx/.xls), or CSV file."})
+    try:
+        file_bytes = f.read()
+        if len(file_bytes) > 10 * 1024 * 1024:
+            return jsonify({"success": False, "message": "File too large (max 10 MB)."})
+        txns = parse_bank_statement(file_bytes, filename)
+        if not txns:
+            return jsonify({"success": False, "message": "No transactions could be detected. Make sure the file is a standard bank statement with Date, Description, and Amount columns."})
+        return jsonify({"success": True, "transactions": txns, "count": len(txns)})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Parsing failed: {str(e)}"})
+
+
+@app.route("/bank-statement/import", methods=["POST"])
+@login_required
+def bank_statement_import():
+    items = request.get_json(force=True).get("transactions", [])
+    imported_count = 0
+    for txn in items:
+        try:
+            txn_date = datetime.strptime(txn["date"], "%Y-%m-%d")
+            amount   = float(txn["amount"])
+            desc     = txn.get("description", "")[:200]
+            txn_type = txn.get("type", "expense")
+            if txn_type == "income":
+                inc = Income(
+                    user_id=current_user.id,
+                    source="Bank Import",
                     amount=amount,
                     date_received=txn_date,
                     description=desc,

@@ -4,6 +4,32 @@
 <style>
 .ei-wrap { max-width: 860px; margin: 0 auto; }
 
+/* Tab switcher */
+.import-tabs {
+  display: flex; gap: 4px; margin-bottom: 28px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: 50px;
+  padding: 5px;
+  width: fit-content;
+}
+.import-tab {
+  padding: 8px 22px;
+  border-radius: 50px;
+  font-weight: 700; font-size: 0.88rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border: none; background: transparent;
+  transition: all .2s;
+  display: flex; align-items: center; gap: 7px;
+}
+.import-tab.active {
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(0,128,128,0.3);
+}
+.import-tab:not(.active):hover { color: var(--brand-primary); }
+
 /* Step cards */
 .ei-card {
   border-radius: 20px;
@@ -115,186 +141,331 @@
 
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
 .empty-state i { font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 10px; }
+
+/* File upload drop zone */
+.upload-zone {
+  border: 2.5px dashed var(--border-color);
+  border-radius: 16px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .25s;
+  background: rgba(0, 128, 128,0.03);
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--brand-primary);
+  background: rgba(0, 128, 128,0.08);
+}
+.upload-zone i { font-size: 2.8rem; color: var(--brand-primary); opacity: .7; display: block; margin-bottom: 12px; }
+.upload-zone .upload-title { font-weight: 700; font-size: 1rem; color: var(--text-primary); margin-bottom: 5px; }
+.upload-zone .upload-sub   { font-size: 0.83rem; color: var(--text-secondary); }
+.upload-zone .file-chosen  { font-size: 0.88rem; color: var(--brand-primary); font-weight: 600; margin-top: 10px; }
+
+/* Bank list chips */
+.bank-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.bank-chip {
+  background: rgba(0,128,128,0.07);
+  border: 1px solid var(--border-color);
+  border-radius: 50px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
 </style>
 
 <div class="ei-wrap">
 
   <div class="page-header mb-4">
-    <h2 class="page-title"><i class="bi bi-envelope-arrow-down me-2"></i>Email Import</h2>
-    <p class="text-muted mb-0">Auto-detect transactions from your inbox and import them directly into Money Mate.</p>
+    <h2 class="page-title"><i class="bi bi-cloud-arrow-down me-2"></i>Import Transactions</h2>
+    <p class="text-muted mb-0">Auto-detect and import transactions from your email inbox or bank statement file.</p>
   </div>
 
-  <!-- Step 1: Connect -->
-  <div class="ei-card" id="card-connect">
-    <div class="ei-card-header">
-      <div class="card-icon"><i class="bi bi-plug-fill"></i></div>
-      <div>
-        <h5>Step 1 — Connect Your Email</h5>
-        <p>Your credentials are only used for this session and are never stored in the database.</p>
-      </div>
-    </div>
-    <div class="ei-card-body">
-
-      {% if imap_connected %}
-      <!-- Already connected -->
-      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <span class="conn-badge connected"><i class="bi bi-check-circle-fill"></i> Connected</span>
-        <span class="text-muted" style="font-size:0.87rem;">Your email account is linked for this session.</span>
-        <button class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-auto" id="btnDisconnect">
-          <i class="bi bi-plug me-1"></i>Disconnect
-        </button>
-      </div>
-      {% else %}
-      <!-- Connect form -->
-      <div class="security-note">
-        <strong><i class="bi bi-shield-lock me-1"></i>Security note:</strong>
-        Your password is sent securely over SSL and only stored in your browser session — it is erased when you log out.
-        For Gmail/Outlook we strongly recommend using an <strong>App Password</strong> instead of your main password.
-      </div>
-
-      <div class="step-row"><div class="step-badge">1</div><div class="step-label">Choose your email provider</div></div>
-      <div class="provider-pills" id="providerPills">
-        <div class="provider-pill active" data-host="imap.gmail.com" data-port="993" onclick="selectProvider(this)">
-          <i class="bi bi-google"></i> Gmail
-        </div>
-        <div class="provider-pill" data-host="imap-mail.outlook.com" data-port="993" onclick="selectProvider(this)">
-          <i class="bi bi-microsoft"></i> Outlook / Hotmail
-        </div>
-        <div class="provider-pill" data-host="imap.mail.yahoo.com" data-port="993" onclick="selectProvider(this)">
-          <i class="bi bi-yahoo"></i> Yahoo Mail
-        </div>
-        <div class="provider-pill" data-host="imap.mail.me.com" data-port="993" onclick="selectProvider(this)">
-          <i class="bi bi-apple"></i> iCloud Mail
-        </div>
-        <div class="provider-pill" data-host="" data-port="993" onclick="selectProvider(this, true)">
-          <i class="bi bi-server"></i> Custom / Other
-        </div>
-      </div>
-
-      <div id="customHostRow" class="row g-3 mb-3" style="display:none!important;">
-        <div class="col-sm-8">
-          <label class="form-label fw-semibold small">IMAP Server</label>
-          <input type="text" id="imapHost" class="form-control" placeholder="e.g. imap.yourprovider.com">
-        </div>
-        <div class="col-sm-4">
-          <label class="form-label fw-semibold small">Port</label>
-          <input type="number" id="imapPort" class="form-control" value="993">
-        </div>
-      </div>
-
-      <div class="step-row mt-3"><div class="step-badge">2</div><div class="step-label">Enter your credentials</div></div>
-      <div class="row g-3 mb-4">
-        <div class="col-sm-6">
-          <label class="form-label fw-semibold small">Email Address</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-            <input type="email" id="imapEmail" class="form-control" placeholder="you@gmail.com">
-          </div>
-        </div>
-        <div class="col-sm-6">
-          <label class="form-label fw-semibold small">
-            App Password
-            <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="ms-1" style="font-size:0.78rem;">(What's this?)</a>
-          </label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-key"></i></span>
-            <input type="password" id="imapPassword" class="form-control" placeholder="App password or email password">
-            <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()"><i class="bi bi-eye" id="eyeIcon"></i></button>
-          </div>
-        </div>
-      </div>
-
-      <div id="connectError" class="alert alert-danger d-none"></div>
-
-      <button class="btn btn-primary rounded-pill px-4" id="btnConnect" onclick="connectEmail()">
-        <i class="bi bi-plug me-2"></i>Connect &amp; Verify
-        <span class="spinner-border spinner-border-sm ms-2 d-none" id="connectSpinner"></span>
-      </button>
-      {% endif %}
-
-    </div>
+  <!-- Tab switcher -->
+  <div class="import-tabs">
+    <button class="import-tab active" id="tab-email" onclick="switchTab('email')">
+      <i class="bi bi-envelope-arrow-down"></i> Email Import
+    </button>
+    <button class="import-tab" id="tab-bank" onclick="switchTab('bank')">
+      <i class="bi bi-file-earmark-spreadsheet"></i> Bank Statement
+    </button>
   </div>
 
-  <!-- Step 2: Scan -->
-  <div class="ei-card {% if not imap_connected %}opacity-50{% endif %}" id="card-scan">
-    <div class="ei-card-header">
-      <div class="card-icon"><i class="bi bi-search-heart"></i></div>
-      <div>
-        <h5>Step 2 — Scan for Transactions</h5>
-        <p>Money Mate scans your inbox for bank alerts, receipts, and payment notifications.</p>
-      </div>
-    </div>
-    <div class="ei-card-body">
-      <div class="row g-3 align-items-end mb-4">
-        <div class="col-sm-4">
-          <label class="form-label fw-semibold small">Look back</label>
-          <select class="form-select" id="scanDays">
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="60">Last 60 days</option>
-            <option value="90">Last 90 days</option>
-          </select>
+  <!-- ═══════════ EMAIL IMPORT PANEL ═══════════ -->
+  <div id="panel-email">
+
+    <!-- Step 1: Connect -->
+    <div class="ei-card" id="card-connect">
+      <div class="ei-card-header">
+        <div class="card-icon"><i class="bi bi-plug-fill"></i></div>
+        <div>
+          <h5>Step 1 — Connect Your Email</h5>
+          <p>Your credentials are only used for this session and are never stored in the database.</p>
         </div>
-        <div class="col-sm-auto">
-          <button class="btn btn-primary rounded-pill px-4" id="btnScan" onclick="scanEmails()" {% if not imap_connected %}disabled{% endif %}>
-            <i class="bi bi-search me-2"></i>Scan Emails
-            <span class="spinner-border spinner-border-sm ms-2 d-none" id="scanSpinner"></span>
+      </div>
+      <div class="ei-card-body">
+
+        {% if imap_connected %}
+        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+          <span class="conn-badge connected"><i class="bi bi-check-circle-fill"></i> Connected</span>
+          <span class="text-muted" style="font-size:0.87rem;">Your email account is linked for this session.</span>
+          <button class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-auto" id="btnDisconnect">
+            <i class="bi bi-plug me-1"></i>Disconnect
           </button>
         </div>
-      </div>
-      <div id="scanError" class="alert alert-danger d-none"></div>
-      <div id="scanInfo"  class="alert alert-info  d-none"></div>
-    </div>
-  </div>
-
-  <!-- Step 3: Review & Import -->
-  <div class="ei-card d-none" id="card-results">
-    <div class="ei-card-header">
-      <div class="card-icon"><i class="bi bi-check2-square"></i></div>
-      <div>
-        <h5>Step 3 — Review &amp; Import</h5>
-        <p>Select the transactions you want to add to Money Mate, then click Import.</p>
-      </div>
-    </div>
-    <div class="ei-card-body">
-
-      <div class="select-all-row">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleAll(this)">
-          <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+        {% else %}
+        <div class="security-note">
+          <strong><i class="bi bi-shield-lock me-1"></i>Security note:</strong>
+          Your password is sent securely over SSL and only stored in your browser session — it is erased when you log out.
+          For Gmail/Outlook we strongly recommend using an <strong>App Password</strong> instead of your main password.
         </div>
-        <span class="text-muted small ms-auto" id="selectedCount">0 selected</span>
-        <button class="btn btn-success rounded-pill px-4" id="btnImport" onclick="importSelected()" disabled>
-          <i class="bi bi-cloud-arrow-up me-2"></i>Import Selected
-          <span class="spinner-border spinner-border-sm ms-2 d-none" id="importSpinner"></span>
+
+        <div class="step-row"><div class="step-badge">1</div><div class="step-label">Choose your email provider</div></div>
+        <div class="provider-pills" id="providerPills">
+          <div class="provider-pill active" data-host="imap.gmail.com" data-port="993" onclick="selectProvider(this)">
+            <i class="bi bi-google"></i> Gmail
+          </div>
+          <div class="provider-pill" data-host="imap-mail.outlook.com" data-port="993" onclick="selectProvider(this)">
+            <i class="bi bi-microsoft"></i> Outlook / Hotmail
+          </div>
+          <div class="provider-pill" data-host="imap.mail.yahoo.com" data-port="993" onclick="selectProvider(this)">
+            <i class="bi bi-yahoo"></i> Yahoo Mail
+          </div>
+          <div class="provider-pill" data-host="imap.mail.me.com" data-port="993" onclick="selectProvider(this)">
+            <i class="bi bi-apple"></i> iCloud Mail
+          </div>
+          <div class="provider-pill" data-host="" data-port="993" onclick="selectProvider(this, true)">
+            <i class="bi bi-server"></i> Custom / Other
+          </div>
+        </div>
+
+        <div id="customHostRow" class="row g-3 mb-3" style="display:none!important;">
+          <div class="col-sm-8">
+            <label class="form-label fw-semibold small">IMAP Server</label>
+            <input type="text" id="imapHost" class="form-control" placeholder="e.g. imap.yourprovider.com">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-semibold small">Port</label>
+            <input type="number" id="imapPort" class="form-control" value="993">
+          </div>
+        </div>
+
+        <div class="step-row mt-3"><div class="step-badge">2</div><div class="step-label">Enter your credentials</div></div>
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold small">Email Address</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+              <input type="email" id="imapEmail" class="form-control" placeholder="you@gmail.com">
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold small">
+              App Password
+              <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="ms-1" style="font-size:0.78rem;">(What's this?)</a>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-key"></i></span>
+              <input type="password" id="imapPassword" class="form-control" placeholder="App password or email password">
+              <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()"><i class="bi bi-eye" id="eyeIcon"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div id="connectError" class="alert alert-danger d-none"></div>
+
+        <button class="btn btn-primary rounded-pill px-4" id="btnConnect" onclick="connectEmail()">
+          <i class="bi bi-plug me-2"></i>Connect &amp; Verify
+          <span class="spinner-border spinner-border-sm ms-2 d-none" id="connectSpinner"></span>
         </button>
-      </div>
+        {% endif %}
 
-      <div id="importSuccess" class="alert alert-success d-none"></div>
-      <div id="importError"   class="alert alert-danger  d-none"></div>
-
-      <div class="table-responsive">
-        <table class="txn-table" id="txnTable">
-          <thead>
-            <tr>
-              <th style="width:36px;"></th>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Type</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody id="txnBody"></tbody>
-        </table>
-      </div>
-      <div id="emptyResults" class="empty-state d-none">
-        <i class="bi bi-inbox"></i>
-        <p class="fw-semibold">No financial emails found in this period.</p>
-        <p class="small">Try increasing the look-back window or check that your inbox has transaction emails.</p>
       </div>
     </div>
-  </div>
+
+    <!-- Step 2: Scan -->
+    <div class="ei-card {% if not imap_connected %}opacity-50{% endif %}" id="card-scan">
+      <div class="ei-card-header">
+        <div class="card-icon"><i class="bi bi-search-heart"></i></div>
+        <div>
+          <h5>Step 2 — Scan for Transactions</h5>
+          <p>Money Mate scans your inbox for bank alerts, receipts, and payment notifications.</p>
+        </div>
+      </div>
+      <div class="ei-card-body">
+        <div class="row g-3 align-items-end mb-4">
+          <div class="col-sm-4">
+            <label class="form-label fw-semibold small">Look back</label>
+            <select class="form-select" id="scanDays">
+              <option value="7">Last 7 days</option>
+              <option value="14">Last 14 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="60">Last 60 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </div>
+          <div class="col-sm-auto">
+            <button class="btn btn-primary rounded-pill px-4" id="btnScan" onclick="scanEmails()" {% if not imap_connected %}disabled{% endif %}>
+              <i class="bi bi-search me-2"></i>Scan Emails
+              <span class="spinner-border spinner-border-sm ms-2 d-none" id="scanSpinner"></span>
+            </button>
+          </div>
+        </div>
+        <div id="scanError" class="alert alert-danger d-none"></div>
+        <div id="scanInfo"  class="alert alert-info  d-none"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Review & Import (email) -->
+    <div class="ei-card d-none" id="card-results">
+      <div class="ei-card-header">
+        <div class="card-icon"><i class="bi bi-check2-square"></i></div>
+        <div>
+          <h5>Step 3 — Review &amp; Import</h5>
+          <p>Select the transactions you want to add to Money Mate, then click Import.</p>
+        </div>
+      </div>
+      <div class="ei-card-body">
+        <div class="select-all-row">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleAll(this, 'email')">
+            <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+          </div>
+          <span class="text-muted small ms-auto" id="selectedCount">0 selected</span>
+          <button class="btn btn-success rounded-pill px-4" id="btnImport" onclick="importSelected('email')" disabled>
+            <i class="bi bi-cloud-arrow-up me-2"></i>Import Selected
+            <span class="spinner-border spinner-border-sm ms-2 d-none" id="importSpinner"></span>
+          </button>
+        </div>
+        <div id="importSuccess" class="alert alert-success d-none"></div>
+        <div id="importError"   class="alert alert-danger  d-none"></div>
+        <div class="table-responsive">
+          <table class="txn-table" id="txnTable">
+            <thead>
+              <tr>
+                <th style="width:36px;"></th>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody id="txnBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyResults" class="empty-state d-none">
+          <i class="bi bi-inbox"></i>
+          <p class="fw-semibold">No financial emails found in this period.</p>
+          <p class="small">Try increasing the look-back window or check that your inbox has transaction emails.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-email -->
+
+
+  <!-- ═══════════ BANK STATEMENT PANEL ═══════════ -->
+  <div id="panel-bank" style="display:none;">
+
+    <!-- Step 1: Upload -->
+    <div class="ei-card">
+      <div class="ei-card-header">
+        <div class="card-icon"><i class="bi bi-file-earmark-arrow-up"></i></div>
+        <div>
+          <h5>Step 1 — Upload Your Bank Statement</h5>
+          <p>Supports PDF, Excel (.xlsx / .xls), and CSV — no login or API needed.</p>
+        </div>
+      </div>
+      <div class="ei-card-body">
+
+        <div class="security-note">
+          <strong><i class="bi bi-shield-lock me-1"></i>Your data stays private:</strong>
+          The file is processed on our server and immediately discarded — nothing is stored. Only the detected transactions are shown to you.
+        </div>
+
+        <div class="step-row"><div class="step-badge">1</div><div class="step-label">Choose your statement file</div></div>
+
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('stmtFile').click()">
+          <i class="bi bi-cloud-arrow-up"></i>
+          <div class="upload-title">Click to browse or drag &amp; drop</div>
+          <div class="upload-sub">PDF, Excel (.xlsx / .xls), or CSV · Max 10 MB</div>
+          <div class="file-chosen d-none" id="fileChosen"></div>
+        </div>
+        <input type="file" id="stmtFile" accept=".pdf,.xlsx,.xls,.csv" style="display:none" onchange="onFileSelected()">
+
+        <div class="mt-3">
+          <p class="small fw-semibold mb-2" style="color:var(--text-secondary);">Works with statements from:</p>
+          <div class="bank-chips">
+            <span class="bank-chip">🏦 SBI</span>
+            <span class="bank-chip">🏦 HDFC</span>
+            <span class="bank-chip">🏦 ICICI</span>
+            <span class="bank-chip">🏦 Axis</span>
+            <span class="bank-chip">🏦 Kotak</span>
+            <span class="bank-chip">🏦 PNB</span>
+            <span class="bank-chip">🏦 Canara</span>
+            <span class="bank-chip">🏦 Yes Bank</span>
+            <span class="bank-chip">🏦 IndusInd</span>
+            <span class="bank-chip">+ any bank with standard columns</span>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <button class="btn btn-primary rounded-pill px-4" id="btnParse" onclick="parseStatement()" disabled>
+            <i class="bi bi-cpu me-2"></i>Parse Statement
+            <span class="spinner-border spinner-border-sm ms-2 d-none" id="parseSpinner"></span>
+          </button>
+        </div>
+        <div id="parseError" class="alert alert-danger d-none mt-3"></div>
+
+      </div>
+    </div>
+
+    <!-- Step 2: Review & Import (bank) -->
+    <div class="ei-card d-none" id="card-bank-results">
+      <div class="ei-card-header">
+        <div class="card-icon"><i class="bi bi-check2-square"></i></div>
+        <div>
+          <h5>Step 2 — Review &amp; Import</h5>
+          <p>Select the transactions you want to add to Money Mate, then click Import.</p>
+        </div>
+      </div>
+      <div class="ei-card-body">
+        <div class="select-all-row">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="bSelectAll" onchange="toggleAll(this, 'bank')">
+            <label class="form-check-label fw-semibold" for="bSelectAll">Select all</label>
+          </div>
+          <span class="text-muted small ms-auto" id="bSelectedCount">0 selected</span>
+          <button class="btn btn-success rounded-pill px-4" id="bBtnImport" onclick="importSelected('bank')" disabled>
+            <i class="bi bi-cloud-arrow-up me-2"></i>Import Selected
+            <span class="spinner-border spinner-border-sm ms-2 d-none" id="bImportSpinner"></span>
+          </button>
+        </div>
+        <div id="bImportSuccess" class="alert alert-success d-none"></div>
+        <div id="bImportError"   class="alert alert-danger  d-none"></div>
+        <div class="table-responsive">
+          <table class="txn-table" id="bTxnTable">
+            <thead>
+              <tr>
+                <th style="width:36px;"></th>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody id="bTxnBody"></tbody>
+          </table>
+        </div>
+        <div id="bEmptyResults" class="empty-state d-none">
+          <i class="bi bi-inbox"></i>
+          <p class="fw-semibold">No transactions detected in this file.</p>
+          <p class="small">Make sure your statement has standard column headers like Date, Description, Debit, and Credit.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-bank -->
 
 </div>
 
@@ -305,8 +476,17 @@
 let selectedHost = 'imap.gmail.com';
 let selectedPort = 993;
 let parsedTransactions = [];
+let bankTransactions   = [];
 
-// Provider selection
+// ── Tab switcher ────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('panel-email').style.display = tab === 'email' ? '' : 'none';
+  document.getElementById('panel-bank').style.display  = tab === 'bank'  ? '' : 'none';
+  document.getElementById('tab-email').classList.toggle('active', tab === 'email');
+  document.getElementById('tab-bank').classList.toggle('active',  tab === 'bank');
+}
+
+// ── Email: Provider selection ────────────────────────────────
 function selectProvider(el, isCustom) {
   document.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
@@ -331,7 +511,7 @@ function togglePwd() {
   }
 }
 
-// Connect
+// ── Email: Connect ───────────────────────────────────────────
 async function connectEmail() {
   const host  = document.getElementById('imapHost')?.value || selectedHost;
   const port  = document.getElementById('imapPort')?.value || selectedPort;
@@ -366,13 +546,12 @@ async function connectEmail() {
   btn.disabled = false;
 }
 
-// Disconnect
 document.getElementById('btnDisconnect')?.addEventListener('click', async () => {
   await fetch('/email-import/disconnect', {method: 'POST'});
   location.reload();
 });
 
-// Scan
+// ── Email: Scan ──────────────────────────────────────────────
 async function scanEmails() {
   const days  = document.getElementById('scanDays').value;
   const errEl = document.getElementById('scanError');
@@ -396,10 +575,9 @@ async function scanEmails() {
     });
     const data = await res.json();
     infoEl.classList.add('d-none');
-
     if (data.success) {
       parsedTransactions = data.transactions;
-      renderResults(parsedTransactions);
+      renderResults(parsedTransactions, 'email');
       card.classList.remove('d-none');
     } else {
       errEl.textContent = data.message;
@@ -414,20 +592,83 @@ async function scanEmails() {
   btn.disabled = false;
 }
 
-// Render results table
-function renderResults(txns) {
-  const tbody  = document.getElementById('txnBody');
-  const empty  = document.getElementById('emptyResults');
-  const selCount = document.getElementById('selectedCount');
+// ── Bank: File upload & drag-drop ────────────────────────────
+function onFileSelected() {
+  const f = document.getElementById('stmtFile').files[0];
+  const chosen = document.getElementById('fileChosen');
+  if (f) {
+    chosen.textContent = '📄 ' + f.name;
+    chosen.classList.remove('d-none');
+    document.getElementById('btnParse').disabled = false;
+  }
+}
+
+const zone = document.getElementById('uploadZone');
+if (zone) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const dt = e.dataTransfer;
+    if (dt.files.length) {
+      document.getElementById('stmtFile').files = dt.files;
+      onFileSelected();
+    }
+  });
+}
+
+// ── Bank: Parse ──────────────────────────────────────────────
+async function parseStatement() {
+  const f = document.getElementById('stmtFile').files[0];
+  if (!f) return;
+  const errEl  = document.getElementById('parseError');
+  const spin   = document.getElementById('parseSpinner');
+  const btn    = document.getElementById('btnParse');
+  const card   = document.getElementById('card-bank-results');
+
+  errEl.classList.add('d-none');
+  spin.classList.remove('d-none');
+  btn.disabled = true;
+  card.classList.add('d-none');
+
+  try {
+    const fd = new FormData();
+    fd.append('file', f);
+    const res  = await fetch('/bank-statement/upload', {method: 'POST', body: fd});
+    const data = await res.json();
+    if (data.success) {
+      bankTransactions = data.transactions;
+      renderResults(bankTransactions, 'bank');
+      card.classList.remove('d-none');
+      card.scrollIntoView({behavior: 'smooth', block: 'start'});
+    } else {
+      errEl.textContent = data.message;
+      errEl.classList.remove('d-none');
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error — please try again.';
+    errEl.classList.remove('d-none');
+  }
+  spin.classList.add('d-none');
+  btn.disabled = false;
+}
+
+// ── Shared: render results table ─────────────────────────────
+function renderResults(txns, mode) {
+  const prefix   = mode === 'bank' ? 'b' : '';
+  const tbody    = document.getElementById(prefix + 'TxnBody');
+  const empty    = document.getElementById(prefix ? 'bEmptyResults' : 'emptyResults');
+  const selCount = document.getElementById(prefix ? 'bSelectedCount' : 'selectedCount');
+  const btnImp   = document.getElementById(prefix ? 'bBtnImport' : 'btnImport');
+  const selAll   = document.getElementById(prefix ? 'bSelectAll' : 'selectAll');
+
   tbody.innerHTML = '';
   selCount.textContent = '0 selected';
-  document.getElementById('btnImport').disabled = true;
-  document.getElementById('selectAll').checked = false;
+  btnImp.disabled = true;
+  selAll.checked = false;
 
-  if (!txns.length) {
-    empty.classList.remove('d-none');
-    return;
-  }
+  if (!txns.length) { empty.classList.remove('d-none'); return; }
   empty.classList.add('d-none');
 
   txns.forEach((t, i) => {
@@ -435,12 +676,11 @@ function renderResults(txns) {
     const typeBadge = isIncome
       ? `<span class="type-badge badge-income"><i class="bi bi-arrow-down-circle-fill"></i> Income</span>`
       : `<span class="type-badge badge-expense"><i class="bi bi-arrow-up-circle-fill"></i> Expense</span>`;
-
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><input class="form-check-input txn-check" type="checkbox" data-idx="${i}" onchange="updateCount()"></td>
+      <td><input class="form-check-input txn-check-${mode}" type="checkbox" data-idx="${i}" onchange="updateCount('${mode}')"></td>
       <td style="white-space:nowrap;">${t.date}</td>
-      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(t.subject)}">${escHtml(t.description || t.subject)}</td>
+      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(t.description)}">${escHtml(t.description)}</td>
       <td>${typeBadge}</td>
       <td class="fw-bold" style="white-space:nowrap;">₹${parseFloat(t.amount).toFixed(2)}</td>
     `;
@@ -452,25 +692,29 @@ function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function toggleAll(cb) {
-  document.querySelectorAll('.txn-check').forEach(c => c.checked = cb.checked);
-  updateCount();
+function toggleAll(cb, mode) {
+  document.querySelectorAll(`.txn-check-${mode}`).forEach(c => c.checked = cb.checked);
+  updateCount(mode);
 }
 
-function updateCount() {
-  const checked = document.querySelectorAll('.txn-check:checked').length;
-  document.getElementById('selectedCount').textContent = `${checked} selected`;
-  document.getElementById('btnImport').disabled = checked === 0;
-  const all = document.querySelectorAll('.txn-check').length;
-  document.getElementById('selectAll').checked = checked === all && all > 0;
+function updateCount(mode) {
+  const checked = document.querySelectorAll(`.txn-check-${mode}:checked`).length;
+  const all     = document.querySelectorAll(`.txn-check-${mode}`).length;
+  const prefix  = mode === 'bank' ? 'b' : '';
+  document.getElementById(prefix ? 'bSelectedCount' : 'selectedCount').textContent = `${checked} selected`;
+  document.getElementById(prefix ? 'bBtnImport' : 'btnImport').disabled = checked === 0;
+  document.getElementById(prefix ? 'bSelectAll' : 'selectAll').checked = checked === all && all > 0;
 }
 
-// Import
-async function importSelected() {
-  const successEl = document.getElementById('importSuccess');
-  const errEl     = document.getElementById('importError');
-  const spin      = document.getElementById('importSpinner');
-  const btn       = document.getElementById('btnImport');
+// ── Shared: import selected ──────────────────────────────────
+async function importSelected(mode) {
+  const prefix    = mode === 'bank' ? 'b' : '';
+  const successEl = document.getElementById(prefix ? 'bImportSuccess' : 'importSuccess');
+  const errEl     = document.getElementById(prefix ? 'bImportError' : 'importError');
+  const spin      = document.getElementById(prefix ? 'bImportSpinner' : 'importSpinner');
+  const btn       = document.getElementById(prefix ? 'bBtnImport' : 'btnImport');
+  const txnList   = mode === 'bank' ? bankTransactions : parsedTransactions;
+  const endpoint  = mode === 'bank' ? '/bank-statement/import' : '/email-import/import';
 
   successEl.classList.add('d-none');
   errEl.classList.add('d-none');
@@ -478,12 +722,12 @@ async function importSelected() {
   btn.disabled = true;
 
   const selected = [];
-  document.querySelectorAll('.txn-check:checked').forEach(cb => {
-    selected.push(parsedTransactions[parseInt(cb.dataset.idx)]);
+  document.querySelectorAll(`.txn-check-${mode}:checked`).forEach(cb => {
+    selected.push(txnList[parseInt(cb.dataset.idx)]);
   });
 
   try {
-    const res = await fetch('/email-import/import', {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({transactions: selected})
@@ -492,10 +736,8 @@ async function importSelected() {
     if (data.success) {
       successEl.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i><strong>${data.imported} transaction${data.imported !== 1 ? 's' : ''} imported!</strong> Go to <a href="/add_expense" class="alert-link">Expenses</a> to categorise them.`;
       successEl.classList.remove('d-none');
-      // Remove imported rows
-      document.querySelectorAll('.txn-check:checked').forEach(cb => cb.closest('tr').remove());
-      parsedTransactions = parsedTransactions.filter((_, i) => !selected.includes(parsedTransactions[i]));
-      updateCount();
+      document.querySelectorAll(`.txn-check-${mode}:checked`).forEach(cb => cb.closest('tr').remove());
+      updateCount(mode);
     } else {
       errEl.textContent = data.message || 'Import failed.';
       errEl.classList.remove('d-none');
@@ -508,7 +750,7 @@ async function importSelected() {
   btn.disabled = false;
 }
 
-// Allow pressing Enter in form fields to connect
+// ── Email: Enter key shortcut ─────────────────────────────────
 ['imapEmail','imapPassword','imapHost','imapPort'].forEach(id => {
   document.getElementById(id)?.addEventListener('keydown', e => {
     if (e.key === 'Enter') connectEmail();
