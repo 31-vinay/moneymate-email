@@ -13,7 +13,7 @@
   </a>
 </div>
 
-{% if not chart_dist and not chart_trend and not chart_inc_exp and not chart_cats %}
+{% if not has_data %}
 <div class="text-center py-5 reveal">
   <div style="font-size:4rem;opacity:0.25;margin-bottom:1rem;"><i class="bi bi-bar-chart-line"></i></div>
   <h5 class="fw-bold mb-2">No data yet</h5>
@@ -93,15 +93,15 @@
         <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">This month</span>
       </div>
       <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
-        {% if chart_dist %}
-        <img src="data:image/png;base64,{{ chart_dist }}" alt="Expense Distribution"
-             style="max-width:100%;max-height:320px;object-fit:contain;">
-        {% else %}
-        <div class="text-center text-muted py-4">
-          <i class="bi bi-pie-chart" style="font-size:3rem;opacity:0.25;"></i>
-          <p class="mt-2 mb-0">No expense data for this month.</p>
+        <div class="chart-wrap" id="wrap-dist">
+          <div class="chart-spinner"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Loading chart…</div>
+          <img class="lazy-chart d-none" data-src="{{ url_for('analysis_chart_dist') }}" alt="Expense Distribution"
+               style="max-width:100%;max-height:320px;object-fit:contain;">
+          <div class="chart-no-data d-none text-center text-muted py-4">
+            <i class="bi bi-pie-chart" style="font-size:3rem;opacity:0.25;"></i>
+            <p class="mt-2 mb-0">No expense data for this month.</p>
+          </div>
         </div>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -112,15 +112,15 @@
         <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">This month · Top 8</span>
       </div>
       <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
-        {% if chart_cats %}
-        <img src="data:image/png;base64,{{ chart_cats }}" alt="Category Breakdown"
-             style="max-width:100%;max-height:380px;object-fit:contain;">
-        {% else %}
-        <div class="text-center text-muted py-4">
-          <i class="bi bi-bar-chart-horizontal" style="font-size:3rem;opacity:0.25;"></i>
-          <p class="mt-2 mb-0">No expense categories to display.</p>
+        <div class="chart-wrap" id="wrap-cats">
+          <div class="chart-spinner"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Loading chart…</div>
+          <img class="lazy-chart d-none" data-src="{{ url_for('analysis_chart_cats') }}" alt="Category Breakdown"
+               style="max-width:100%;max-height:380px;object-fit:contain;">
+          <div class="chart-no-data d-none text-center text-muted py-4">
+            <i class="bi bi-bar-chart-horizontal" style="font-size:3rem;opacity:0.25;"></i>
+            <p class="mt-2 mb-0">No expense categories to display.</p>
+          </div>
         </div>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -133,15 +133,15 @@
     <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">Last 6 months</span>
   </div>
   <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
-    {% if chart_trend %}
-    <img src="data:image/png;base64,{{ chart_trend }}" alt="Monthly Spending Trend"
-         style="max-width:100%;max-height:320px;object-fit:contain;">
-    {% else %}
-    <div class="text-center text-muted py-4">
-      <i class="bi bi-graph-up" style="font-size:3rem;opacity:0.25;"></i>
-      <p class="mt-2 mb-0">Not enough data for a trend yet.</p>
+    <div class="chart-wrap" id="wrap-trend">
+      <div class="chart-spinner"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Loading chart…</div>
+      <img class="lazy-chart d-none" data-src="{{ url_for('analysis_chart_trend') }}" alt="Monthly Spending Trend"
+           style="max-width:100%;max-height:320px;object-fit:contain;">
+      <div class="chart-no-data d-none text-center text-muted py-4">
+        <i class="bi bi-graph-up" style="font-size:3rem;opacity:0.25;"></i>
+        <p class="mt-2 mb-0">Not enough data for a trend yet.</p>
+      </div>
     </div>
-    {% endif %}
   </div>
 </div>
 
@@ -152,15 +152,15 @@
     <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">Last 6 months</span>
   </div>
   <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
-    {% if chart_inc_exp %}
-    <img src="data:image/png;base64,{{ chart_inc_exp }}" alt="Income vs Expense"
-         style="max-width:100%;max-height:320px;object-fit:contain;">
-    {% else %}
-    <div class="text-center text-muted py-4">
-      <i class="bi bi-bar-chart-line" style="font-size:3rem;opacity:0.25;"></i>
-      <p class="mt-2 mb-0">No income or expense data to compare.</p>
+    <div class="chart-wrap" id="wrap-inc-exp">
+      <div class="chart-spinner"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Loading chart…</div>
+      <img class="lazy-chart d-none" data-src="{{ url_for('analysis_chart_inc_exp') }}" alt="Income vs Expense"
+           style="max-width:100%;max-height:320px;object-fit:contain;">
+      <div class="chart-no-data d-none text-center text-muted py-4">
+        <i class="bi bi-bar-chart-line" style="font-size:3rem;opacity:0.25;"></i>
+        <p class="mt-2 mb-0">No income or expense data to compare.</p>
+      </div>
     </div>
-    {% endif %}
   </div>
 </div>
 
@@ -236,31 +236,47 @@
     requestAnimationFrame(step);
   }
 
+  function loadChart(img) {
+    var wrap = img.closest('.chart-wrap');
+    var spinner = wrap.querySelector('.chart-spinner');
+    var noData = wrap.querySelector('.chart-no-data');
+    img.onload = function() {
+      spinner.style.display = 'none';
+      img.classList.remove('d-none');
+    };
+    img.onerror = function() {
+      spinner.style.display = 'none';
+      noData.classList.remove('d-none');
+    };
+    img.src = img.getAttribute('data-src');
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     var skeletons = document.getElementById('analysis-skeletons');
     var stats     = document.getElementById('analysis-stats');
-    if (!skeletons || !stats) return;
-
-    var countUpDone = false;
-    function runCountUp() {
-      if (countUpDone) return;
-      countUpDone = true;
-      stats.querySelectorAll('[data-countup]').forEach(function(el) {
-        countUp(el, parseFloat(el.getAttribute('data-countup')) || 0, 900);
-      });
+    if (skeletons && stats) {
+      var countUpDone = false;
+      function runCountUp() {
+        if (countUpDone) return;
+        countUpDone = true;
+        stats.querySelectorAll('[data-countup]').forEach(function(el) {
+          countUp(el, parseFloat(el.getAttribute('data-countup')) || 0, 900);
+        });
+      }
+      setTimeout(function() {
+        skeletons.style.display = 'none';
+        stats.style.removeProperty('display');
+        var io = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) { runCountUp(); io.disconnect(); }
+          });
+        }, { threshold: 0.1 });
+        io.observe(stats);
+        setTimeout(runCountUp, 700);
+      }, 300);
     }
 
-    setTimeout(function() {
-      skeletons.style.display = 'none';
-      stats.style.removeProperty('display');
-      var io = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-          if (entry.isIntersecting) { runCountUp(); io.disconnect(); }
-        });
-      }, { threshold: 0.1 });
-      io.observe(stats);
-      setTimeout(runCountUp, 700);
-    }, 500);
+    document.querySelectorAll('.lazy-chart').forEach(loadChart);
   });
 })();
 </script>

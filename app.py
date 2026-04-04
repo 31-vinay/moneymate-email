@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, send_from_directory
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, send_from_directory, send_file, make_response
 from flask_login import (
     LoginManager,
     login_user,
@@ -1269,29 +1269,11 @@ def dashboard():
 
 
     monthly_spending = defaultdict(float)
-
     for exp in expenses:
-        month = exp.date.strftime("%b")
-        monthly_spending[month] += exp.amount
+        monthly_spending[exp.date.strftime("%b")] += exp.amount
 
-    essential = 0
-    non_essential = 0
-
-    for exp in expenses:
-        if exp.is_essential:
-            essential += exp.amount
-        else:
-            non_essential += exp.amount
-
-    total = essential + non_essential
-
-    if total > 0:
-        needs_pct = (essential / total) * 100
-        wants_pct = (non_essential / total) * 100
-    else:
-        needs_pct = wants_pct = 0
-
-    wants_alert = wants_pct > 50
+    essential = essential_spent
+    non_essential = non_essential_spent
 
     # 50/30/20 Budget Rule
     budget_needs = total_income * 0.50
@@ -1873,6 +1855,104 @@ def make_chart(fig):
     return img_b64
 
 
+def make_chart_png(fig):
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', dpi=110, transparent=True)
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+
+
+def _get_analysis_data(user_id):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    month_start = datetime(now.year, now.month, 1)
+    six_months_ago = now - timedelta(days=180)
+
+    expenses_month = Expense.query.filter(
+        Expense.user_id == user_id, Expense.date >= month_start
+    ).all()
+    all_expenses = Expense.query.filter(
+        Expense.user_id == user_id, Expense.date >= six_months_ago
+    ).all()
+    all_incomes = Income.query.filter(
+        Income.user_id == user_id, Income.date_received >= six_months_ago
+    ).all()
+
+    categories = {}
+    for e in expenses_month:
+        categories[e.category] = categories.get(e.category, 0) + e.amount
+
+    monthly_spending = defaultdict(float)
+    for exp in all_expenses:
+        key = exp.date.strftime('%b %Y')
+        monthly_spending[key] += exp.amount
+    sorted_months = sorted(monthly_spending.keys(), key=lambda m: datetime.strptime(m, '%b %Y'))
+    monthly_spending_ordered = {m: monthly_spending[m] for m in sorted_months}
+
+    monthly_income = defaultdict(float)
+    monthly_expense_all = defaultdict(float)
+    for inc in all_incomes:
+        monthly_income[inc.date_received.strftime('%b %Y')] += inc.amount
+    for exp in all_expenses:
+        monthly_expense_all[exp.date.strftime('%b %Y')] += exp.amount
+
+    return categories, monthly_spending_ordered, dict(monthly_income), dict(monthly_expense_all)
+
+
+def _chart_png_response(buf):
+    resp = make_response(send_file(buf, mimetype='image/png'))
+    resp.headers['Cache-Control'] = 'private, max-age=300'
+    return resp
+
+
+@app.route("/analysis/chart/dist")
+@login_required
+def analysis_chart_dist():
+    dark_mode = request.cookies.get('darkMode') == 'true'
+    categories, _, _, _ = _get_analysis_data(current_user.id)
+    fig_result = chart_expense_distribution(categories, dark_mode=dark_mode)
+    if not fig_result:
+        return ('', 204)
+    buf = io.BytesIO(base64.b64decode(fig_result))
+    return _chart_png_response(buf)
+
+
+@app.route("/analysis/chart/cats")
+@login_required
+def analysis_chart_cats():
+    dark_mode = request.cookies.get('darkMode') == 'true'
+    categories, _, _, _ = _get_analysis_data(current_user.id)
+    fig_result = chart_category_breakdown(categories, dark_mode=dark_mode)
+    if not fig_result:
+        return ('', 204)
+    buf = io.BytesIO(base64.b64decode(fig_result))
+    return _chart_png_response(buf)
+
+
+@app.route("/analysis/chart/trend")
+@login_required
+def analysis_chart_trend():
+    dark_mode = request.cookies.get('darkMode') == 'true'
+    _, monthly_spending_ordered, _, _ = _get_analysis_data(current_user.id)
+    fig_result = chart_monthly_trend(monthly_spending_ordered, dark_mode=dark_mode)
+    if not fig_result:
+        return ('', 204)
+    buf = io.BytesIO(base64.b64decode(fig_result))
+    return _chart_png_response(buf)
+
+
+@app.route("/analysis/chart/inc_exp")
+@login_required
+def analysis_chart_inc_exp():
+    dark_mode = request.cookies.get('darkMode') == 'true'
+    _, _, monthly_income, monthly_expense_all = _get_analysis_data(current_user.id)
+    fig_result = chart_income_vs_expense(monthly_income, monthly_expense_all, dark_mode=dark_mode)
+    if not fig_result:
+        return ('', 204)
+    buf = io.BytesIO(base64.b64decode(fig_result))
+    return _chart_png_response(buf)
+
+
 def chart_expense_distribution(categories, dark_mode=False):
     if not categories:
         return None
@@ -2014,50 +2094,11 @@ def chart_category_breakdown(categories, dark_mode=False):
 def analysis():
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_start = datetime(now.year, now.month, 1)
-    six_months_ago = now - timedelta(days=180)
 
     expenses_month = Expense.query.filter(
         Expense.user_id == current_user.id,
         Expense.date >= month_start
     ).all()
-
-    all_expenses = Expense.query.filter(
-        Expense.user_id == current_user.id,
-        Expense.date >= six_months_ago
-    ).all()
-
-    all_incomes = Income.query.filter(
-        Income.user_id == current_user.id,
-        Income.date_received >= six_months_ago
-    ).all()
-
-    categories = {}
-    for e in expenses_month:
-        categories[e.category] = categories.get(e.category, 0) + e.amount
-
-    monthly_spending = defaultdict(float)
-    for exp in all_expenses:
-        key = exp.date.strftime('%b %Y')
-        monthly_spending[key] += exp.amount
-    sorted_months = sorted(monthly_spending.keys(),
-                           key=lambda m: datetime.strptime(m, '%b %Y'))
-    monthly_spending_ordered = {m: monthly_spending[m] for m in sorted_months}
-
-    monthly_income = defaultdict(float)
-    for inc in all_incomes:
-        key = inc.date_received.strftime('%b %Y')
-        monthly_income[key] += inc.amount
-
-    monthly_expense_all = defaultdict(float)
-    for exp in all_expenses:
-        key = exp.date.strftime('%b %Y')
-        monthly_expense_all[key] += exp.amount
-
-    dark_mode = request.cookies.get('darkMode') == 'true'
-    chart_dist  = chart_expense_distribution(categories, dark_mode=dark_mode)
-    chart_inc_exp = chart_income_vs_expense(dict(monthly_income), dict(monthly_expense_all), dark_mode=dark_mode)
-    chart_trend = chart_monthly_trend(monthly_spending_ordered, dark_mode=dark_mode)
-    chart_cats  = chart_category_breakdown(categories, dark_mode=dark_mode)
 
     total_income = sum(i.amount for i in Income.query.filter(
         Income.user_id == current_user.id,
@@ -2067,15 +2108,17 @@ def analysis():
     essential = sum(e.amount for e in expenses_month if e.is_essential)
     non_essential = total_spent - essential
 
+    categories = {}
+    for e in expenses_month:
+        categories[e.category] = categories.get(e.category, 0) + e.amount
+
     days_passed = (now - month_start).days + 1
     burn_rate = total_spent / days_passed if days_passed > 0 else 0
 
+    has_data = bool(expenses_month) or total_income > 0
+
     return render_template(
         "analysis.html",
-        chart_dist=chart_dist,
-        chart_inc_exp=chart_inc_exp,
-        chart_trend=chart_trend,
-        chart_cats=chart_cats,
         categories=categories,
         total_income=total_income,
         total_spent=total_spent,
@@ -2083,6 +2126,7 @@ def analysis():
         non_essential=non_essential,
         burn_rate=burn_rate,
         now=now,
+        has_data=has_data,
     )
 
 
