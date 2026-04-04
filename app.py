@@ -2418,29 +2418,71 @@ def chart_category_breakdown(categories, dark_mode=False):
 @login_required
 def analysis():
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    month_start = datetime(now.year, now.month, 1)
 
-    expenses_month = Expense.query.filter(
+    # ── Date-range filter ────────────────────────────────────────────
+    dr = request.args.get("dr", "this_month")   # this_month | prev_month | 2months | 3months | 6months | custom
+    custom_from = request.args.get("from", "")
+    custom_to   = request.args.get("to", "")
+
+    if dr == "prev_month":
+        first_this = datetime(now.year, now.month, 1)
+        date_to   = first_this - timedelta(seconds=1)
+        date_from = datetime(date_to.year, date_to.month, 1)
+        range_label = date_from.strftime("%B %Y")
+    elif dr == "2months":
+        date_from = datetime(now.year, now.month, 1) - timedelta(days=60)
+        date_from = datetime(date_from.year, date_from.month, 1)
+        date_to   = now
+        range_label = "Past 2 Months"
+    elif dr == "3months":
+        date_from = datetime(now.year, now.month, 1) - timedelta(days=90)
+        date_from = datetime(date_from.year, date_from.month, 1)
+        date_to   = now
+        range_label = "Past 3 Months"
+    elif dr == "6months":
+        date_from = datetime(now.year, now.month, 1) - timedelta(days=180)
+        date_from = datetime(date_from.year, date_from.month, 1)
+        date_to   = now
+        range_label = "Past 6 Months"
+    elif dr == "custom" and custom_from and custom_to:
+        try:
+            date_from = datetime.strptime(custom_from, "%Y-%m-%d")
+            date_to   = datetime.strptime(custom_to,   "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            range_label = f"{date_from.strftime('%d %b %Y')} – {date_to.strftime('%d %b %Y')}"
+        except ValueError:
+            date_from = datetime(now.year, now.month, 1)
+            date_to   = now
+            range_label = "This Month"
+            dr = "this_month"
+    else:
+        dr = "this_month"
+        date_from = datetime(now.year, now.month, 1)
+        date_to   = now
+        range_label = now.strftime("%B %Y")
+
+    expenses_range = Expense.query.filter(
         Expense.user_id == current_user.id,
-        Expense.date >= month_start
+        Expense.date >= date_from,
+        Expense.date <= date_to,
     ).all()
 
     total_income = sum(i.amount for i in Income.query.filter(
         Income.user_id == current_user.id,
-        Income.date_received >= month_start
+        Income.date_received >= date_from,
+        Income.date_received <= date_to,
     ).all())
-    total_spent = sum(e.amount for e in expenses_month)
-    essential = sum(e.amount for e in expenses_month if e.is_essential)
+    total_spent   = sum(e.amount for e in expenses_range)
+    essential     = sum(e.amount for e in expenses_range if e.is_essential)
     non_essential = total_spent - essential
 
     categories = {}
-    for e in expenses_month:
+    for e in expenses_range:
         categories[e.category] = categories.get(e.category, 0) + e.amount
 
-    days_passed = (now - month_start).days + 1
-    burn_rate = total_spent / days_passed if days_passed > 0 else 0
+    days_in_range = max((date_to - date_from).days + 1, 1)
+    burn_rate     = total_spent / days_in_range
 
-    has_data = bool(expenses_month) or total_income > 0
+    has_data = bool(expenses_range) or total_income > 0
 
     return render_template(
         "analysis.html",
@@ -2452,6 +2494,10 @@ def analysis():
         burn_rate=burn_rate,
         now=now,
         has_data=has_data,
+        dr=dr,
+        range_label=range_label,
+        custom_from=custom_from,
+        custom_to=custom_to,
     )
 
 

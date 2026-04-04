@@ -1,16 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-4 reveal flex-wrap gap-3">
+<div class="d-flex align-items-center justify-content-between mb-3 reveal flex-wrap gap-3" style="position:relative;z-index:200;">
   <div>
     <h4 class="mb-0 fw-bold" style="color:var(--text-primary);">
       <i class="bi bi-bar-chart-line me-2" style="color:var(--brand-primary);"></i>Analysis
     </h4>
-    <p class="text-muted mb-0" style="font-size:0.88rem;">Charts and insights for the past 6 months · Generated {{ now.strftime('%d %b %Y %I:%M %p') }}</p>
+    <p class="text-muted mb-0" style="font-size:0.88rem;">
+      Showing data for <strong>{{ range_label }}</strong> · Generated {{ now.strftime('%d %b %Y %I:%M %p') }}
+    </p>
   </div>
   <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-sm rounded-pill px-4">
     <i class="bi bi-speedometer2 me-1"></i>Dashboard
   </a>
+</div>
+
+<!-- ── Date-range filter bar ── -->
+<div class="card mb-4 reveal" style="border:1px solid var(--border-color);">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="fw-semibold me-1" style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">
+        <i class="bi bi-calendar-range me-1"></i>Range:
+      </span>
+      {% set presets = [
+        ('this_month', 'This Month'),
+        ('prev_month', 'Prev Month'),
+        ('2months',    'Past 2 Months'),
+        ('3months',    'Past 3 Months'),
+        ('6months',    'Past 6 Months'),
+      ] %}
+      {% for key, label in presets %}
+      <a href="{{ url_for('analysis', dr=key) }}"
+         class="btn btn-sm rounded-pill {% if dr == key %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+         style="font-size:0.76rem;padding:3px 12px;">
+        {{ label }}
+      </a>
+      {% endfor %}
+
+      <!-- Custom date range -->
+      <form method="get" action="{{ url_for('analysis') }}"
+            class="d-flex align-items-center gap-1 ms-auto flex-wrap"
+            id="custom-range-form">
+        <input type="hidden" name="dr" value="custom">
+        <input type="date" name="from" value="{{ custom_from }}"
+               class="form-control form-control-sm"
+               style="width:130px;font-size:0.76rem;"
+               placeholder="From"
+               id="custom-from">
+        <span style="font-size:0.8rem;color:var(--text-muted);">–</span>
+        <input type="date" name="to" value="{{ custom_to }}"
+               class="form-control form-control-sm"
+               style="width:130px;font-size:0.76rem;"
+               placeholder="To"
+               id="custom-to">
+        <button type="submit"
+                class="btn btn-sm rounded-pill {% if dr == 'custom' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                style="font-size:0.76rem;padding:3px 12px;">
+          <i class="bi bi-check2"></i> Apply
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 
 {% if not has_data %}
@@ -49,18 +99,18 @@
   <div class="col-6 col-md-3 reveal reveal-delay-1">
     <div class="stat-card stat-income h-100">
       <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
-      <div class="stat-label">This Month Income</div>
+      <div class="stat-label">Income</div>
       <div class="stat-value" data-countup="{{ "%.0f"|format(total_income) }}">₹0</div>
-      <div class="stat-sub">This month</div>
+      <div class="stat-sub">{{ range_label }}</div>
       <div class="stat-bg-icon"><i class="bi bi-cash-stack"></i></div>
     </div>
   </div>
   <div class="col-6 col-md-3 reveal reveal-delay-2">
     <div class="stat-card stat-expense h-100">
       <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
-      <div class="stat-label">This Month Spent</div>
+      <div class="stat-label">Total Spent</div>
       <div class="stat-value" data-countup="{{ "%.0f"|format(total_spent) }}">₹0</div>
-      <div class="stat-sub">This month</div>
+      <div class="stat-sub">{{ range_label }}</div>
       <div class="stat-bg-icon"><i class="bi bi-wallet2"></i></div>
     </div>
   </div>
@@ -167,7 +217,7 @@
 <!-- Category table -->
 {% if categories %}
 <div class="card mb-4 reveal reveal-delay-3">
-  <div class="card-header"><i class="bi bi-table me-2"></i>Category Summary — This Month</div>
+  <div class="card-header"><i class="bi bi-table me-2"></i>Category Summary — {{ range_label }}</div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0">
