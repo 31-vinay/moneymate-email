@@ -1360,6 +1360,8 @@ def reset_account():
 def update_goals_wants_pct():
     try:
         pct = float(request.form.get("goals_wants_pct", 30))
+        if pct != pct:  # NaN check: NaN is the only value not equal to itself
+            raise ValueError("NaN is not a valid percentage")
         pct = max(0.0, min(100.0, pct))
         current_user.goals_wants_pct = round(pct, 1)
         db.session.commit()
