@@ -110,6 +110,8 @@ with app.app_context():
         "ALTER TABLE expense ADD COLUMN sub_expired_notified BOOLEAN DEFAULT 0",
         "ALTER TABLE user ADD COLUMN mpin VARCHAR(6)",
         "ALTER TABLE user ADD COLUMN notifications_enabled BOOLEAN DEFAULT 1",
+        "ALTER TABLE user ADD COLUMN savings_balance FLOAT DEFAULT 0.0",
+        "ALTER TABLE user ADD COLUMN goals_wants_pct FLOAT DEFAULT 30.0",
     ]
     for stmt in migration_stmts:
         try:
@@ -833,37 +835,33 @@ def run_monthly_reset(user):
         Income.date_received < prev_month_end,
     ).delete(synchronize_session=False)
 
-    # ── Carry leftover balance into savings goals (or as income if no goals) ──
-    carried = 0
-    if leftover > 0:
-        priority_order = {'high': 0, 'medium': 1, 'low': 2}
-        active_goals = sorted(
-            [g for g in Goal.query.filter_by(user_id=user.id).all()
-             if g.saved_amount < g.target_amount],
-            key=lambda g: priority_order.get(g.priority, 1)
-        )
-        if active_goals:
-            total_monthly = sum(g.monthly_savings for g in active_goals)
-            for g in active_goals:
-                share = round(
-                    leftover * (g.monthly_savings / total_monthly) if total_monthly > 0
-                    else leftover / len(active_goals), 2
-                )
-                g.saved_amount = round(min(g.target_amount, g.saved_amount + share), 2)
-            carried = leftover
-        else:
-            db.session.add(Income(
-                user_id=user.id,
-                source="Monthly Savings",
-                amount=leftover,
-                date_received=now,
-                description=f"Leftover balance from {last_reset.strftime('%B %Y')}",
-                is_recurring=False,
-            ))
-            carried = leftover
+    # ── Fund goals from the Wants budget (user-configured %) ──
+    goals_wants_pct = max(0.0, min(100.0, user.goals_wants_pct or 30.0))
+    goals_alloc_budget = round(prev_income * 0.30 * goals_wants_pct / 100, 2)
+
+    active_goals = sorted(
+        [g for g in Goal.query.filter_by(user_id=user.id).all()
+         if g.saved_amount < g.target_amount],
+        key=lambda g: (int(g.priority) if str(g.priority).isdigit() else 99)
+    )
+    goals_funded = 0.0
+    if active_goals and goals_alloc_budget > 0:
+        total_monthly = sum(g.monthly_savings for g in active_goals)
+        for g in active_goals:
+            share = round(
+                goals_alloc_budget * (g.monthly_savings / total_monthly) if total_monthly > 0
+                else goals_alloc_budget / len(active_goals), 2
+            )
+            g.saved_amount = round(min(g.target_amount, g.saved_amount + share), 2)
+            goals_funded += share
+
+    # ── Carry true net leftover into cumulative savings_balance ──
+    # Net leftover = income − expenses − goals funded this month
+    net_leftover = round(max(0.0, prev_income - prev_expense_total - goals_funded), 2)
+    user.savings_balance = round((user.savings_balance or 0.0) + net_leftover, 2)
 
     db.session.commit()
-    return True, carried
+    return True, net_leftover, round(goals_funded, 2)
 
 
 def check_subscription_expiry(user_id):
@@ -1126,9 +1124,24 @@ def reset_account():
     Expense.query.filter_by(user_id=current_user.id).delete()
     Goal.query.filter_by(user_id=current_user.id).delete()
     current_user.last_monthly_reset = None
+    current_user.savings_balance = 0.0
     db.session.commit()
     flash("Your account data has been reset. Your account is still active.", "success")
     return redirect(url_for("dashboard"))
+
+
+@app.route("/update-goals-wants-pct", methods=["POST"])
+@login_required
+def update_goals_wants_pct():
+    try:
+        pct = float(request.form.get("goals_wants_pct", 30))
+        pct = max(0.0, min(100.0, pct))
+        current_user.goals_wants_pct = round(pct, 1)
+        db.session.commit()
+        flash(f"Goals budget updated: {current_user.goals_wants_pct:.0f}% of your Wants budget will go to goals each month.", "success")
+    except (ValueError, TypeError):
+        flash("Invalid percentage value.", "danger")
+    return redirect(url_for("settings"))
 
 
 @app.route("/request-account-info")
@@ -1190,11 +1203,13 @@ def complete_tutorial():
 @login_required
 def dashboard():
     # Monthly auto-reset: clear previous month's non-subscription/non-recurring data
-    was_reset, carried_savings = run_monthly_reset(current_user)
+    was_reset, net_leftover, goals_funded_reset = run_monthly_reset(current_user)
     if was_reset:
         msg = "A new month has started! Your dashboard has been reset. Subscriptions and recurring income are preserved."
-        if carried_savings > 0:
-            msg += f" ₹{carried_savings:,.2f} leftover balance was carried forward to your savings."
+        if net_leftover > 0:
+            msg += f" ₹{net_leftover:,.2f} net surplus was added to your savings."
+        if goals_funded_reset > 0:
+            msg += f" ₹{goals_funded_reset:,.2f} was allocated to your goals from your Wants budget."
         flash(msg, "info")
 
     # Check subscription expiry
@@ -1297,8 +1312,13 @@ def dashboard():
     needs_over = needs_remaining < 0
     wants_over = wants_remaining < 0
 
-    # Total savings across all goals
-    total_savings = sum(g.saved_amount for g in goals)
+    # Cumulative savings balance (carries forward month to month)
+    total_savings = round(current_user.savings_balance or 0.0, 2)
+
+    # Goals allocation from Wants budget
+    goals_wants_pct = max(0.0, min(100.0, current_user.goals_wants_pct or 30.0))
+    goals_alloc = round(budget_wants * goals_wants_pct / 100, 2)
+    free_wants = round(budget_wants - goals_alloc, 2)
 
     # Month-end prediction
     days_in_month = calendar.monthrange(now.year, now.month)[1]
@@ -1321,7 +1341,7 @@ def dashboard():
     # Subscriptions to consider pausing
     top_subs = sorted(subscriptions, key=lambda s: s["avg_amount"], reverse=True)[:3]
 
-    # Goal suggestions: recommend where to put savings/extra money based on numeric priority
+    # Goal suggestions: recommend allocation from Wants goals budget
     def goal_priority_num(g):
         try:
             return int(g.priority)
@@ -1333,13 +1353,13 @@ def dashboard():
         key=goal_priority_num
     )
     goal_suggestions = []
-    if total_income > 0 and active_goals:
+    if total_income > 0 and active_goals and goals_alloc > 0:
         # Proportional allocation using inverse-weight: priority 1 gets most
         weights = [1.0 / goal_priority_num(g) for g in active_goals]
         total_weight = sum(weights)
         for g, w in zip(active_goals, weights):
             alloc_pct = w / total_weight if total_weight > 0 else 1.0 / len(active_goals)
-            suggested = round(min(budget_savings * alloc_pct, g.remaining_amount), 2)
+            suggested = round(min(goals_alloc * alloc_pct, g.remaining_amount), 2)
             goal_suggestions.append({
                 "name": g.name,
                 "priority": goal_priority_num(g),
@@ -1372,7 +1392,6 @@ def dashboard():
         budget_savings=budget_savings,
         needs_remaining=needs_remaining,
         wants_remaining=wants_remaining,
-        savings_allocated=savings_allocated,
         needs_used_pct=needs_used_pct,
         wants_used_pct=wants_used_pct,
         needs_warning=needs_warning,
@@ -1380,6 +1399,9 @@ def dashboard():
         needs_over=needs_over,
         wants_over=wants_over,
         total_savings=total_savings,
+        goals_wants_pct=goals_wants_pct,
+        goals_alloc=goals_alloc,
+        free_wants=free_wants,
         goal_suggestions=goal_suggestions,
         goals=goals,
         days_remaining=days_remaining,

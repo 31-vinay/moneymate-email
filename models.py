@@ -16,6 +16,8 @@ class User(UserMixin, db.Model):
     has_seen_tutorial = db.Column(db.Boolean, default=False, nullable=False)
     last_monthly_reset = db.Column(db.DateTime, nullable=True)
     notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    savings_balance = db.Column(db.Float, default=0.0, nullable=False)
+    goals_wants_pct = db.Column(db.Float, default=30.0, nullable=False)
     incomes = db.relationship('Income', backref='user', lazy=True)
     expenses = db.relationship('Expense', backref='user', lazy=True)
     goals = db.relationship('Goal', backref='user', lazy=True)

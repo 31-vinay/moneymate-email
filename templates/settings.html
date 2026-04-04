@@ -242,6 +242,50 @@
     </div>
   </div>
 
+  <!-- ── Goals Budget ── -->
+  <div class="settings-card reveal reveal-delay-1">
+    <div class="settings-card-header">
+      <div class="card-icon"><i class="bi bi-bullseye"></i></div>
+      <div>
+        <h5>Goals Budget</h5>
+        <p>Allocate a slice of your Wants budget to savings goals</p>
+      </div>
+    </div>
+    <div class="settings-card-body">
+      <p class="text-muted mb-3" style="font-size:0.85rem;">
+        Your <strong>Savings (20%)</strong> stays intact. Set what percentage of your
+        <strong>Wants (30%)</strong> budget is ring-fenced for your savings goals each month.
+        The remainder of Wants is yours for discretionary spending.
+      </p>
+      <form method="POST" action="{{ url_for('update_goals_wants_pct') }}" id="goalsWantsPctForm">
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="fw-semibold" style="font-size:0.9rem;">
+              <i class="bi bi-sliders me-1"></i>Goals slice of Wants budget
+            </label>
+            <span class="fw-bold" style="color:#f39c12;font-size:1.1rem;" id="gwPctDisplay">
+              {{ current_user.goals_wants_pct | int }}%
+            </span>
+          </div>
+          <input type="range" class="form-range" id="goals_wants_pct_slider"
+                 min="0" max="100" step="5"
+                 value="{{ current_user.goals_wants_pct | int }}"
+                 oninput="document.getElementById('goals_wants_pct_val').value=this.value;
+                          document.getElementById('gwPctDisplay').textContent=this.value+'%';">
+          <input type="hidden" name="goals_wants_pct" id="goals_wants_pct_val"
+                 value="{{ current_user.goals_wants_pct | int }}">
+          <div class="d-flex justify-content-between" style="font-size:0.75rem;color:var(--text-muted);">
+            <span>0% (all Wants free)</span>
+            <span>100% (all Wants to goals)</span>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">
+          <i class="bi bi-check-circle me-1"></i>Save
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- ── Email Import ── -->
   <div class="settings-card reveal">
     <div class="settings-card-header">

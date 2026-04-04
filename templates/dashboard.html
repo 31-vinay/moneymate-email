@@ -193,7 +193,7 @@
               {% if wants_over %}Over budget{% elif wants_warning %}Almost full{% else %}On track{% endif %}
             </span>
           </div>
-          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Budget: ₹{{ "%.0f"|format(budget_wants) }}</div>
+          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Total Wants: ₹{{ "%.0f"|format(budget_wants) }}</div>
           <div class="progress mb-2" style="height:12px;">
             <div class="progress-bar {% if wants_over %}bg-danger{% elif wants_warning %}bg-warning{% else %}bg-warning{% endif %}"
                  style="width:{{ wants_used_pct }}%;" title="{{ "%.1f"|format(wants_used_pct) }}% used"></div>
@@ -208,6 +208,18 @@
               {% endif %}
             </span>
           </div>
+          {% if goals_alloc > 0 %}
+          <div class="mt-2 pt-2" style="border-top:1px dashed rgba(243,156,18,0.3);font-size:0.78rem;">
+            <div class="d-flex justify-content-between">
+              <span style="color:#f39c12;"><i class="bi bi-bullseye me-1"></i>Goals budget ({{ "%.0f"|format(goals_wants_pct) }}% of wants)</span>
+              <strong>₹{{ "%.0f"|format(goals_alloc) }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <span style="color:var(--text-muted);">Free for discretionary</span>
+              <strong>₹{{ "%.0f"|format(free_wants) }}</strong>
+            </div>
+          </div>
+          {% endif %}
           {% if wants_warning %}
           <div class="alert alert-warning mt-2 py-1 mb-0" style="font-size:0.8rem;">
             <i class="bi bi-exclamation-triangle-fill me-1"></i>Only 10% of your Wants budget remains!
@@ -221,17 +233,19 @@
         </div>
       </div>
 
-      <!-- Savings & Debt (20%) -->
+      <!-- Savings (20%) — cumulative balance -->
       <div class="col-md-4">
         <div class="p-3 rounded-3 h-100" style="background: rgba(0, 128, 128,0.07); border: 1px solid rgba(0, 128, 128,0.2);">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold" style="color:#008080;"><i class="bi bi-piggy-bank-fill me-1"></i>Savings &amp; Debt <span class="text-muted fw-normal" style="font-size:0.8rem;">(20%)</span></span>
-            <span class="badge" style="background:#008080;">Allocated</span>
+            <span class="fw-bold" style="color:#008080;"><i class="bi bi-piggy-bank-fill me-1"></i>Savings <span class="text-muted fw-normal" style="font-size:0.8rem;">(20%)</span></span>
+            <span class="badge" style="background:#008080;">Accumulated</span>
           </div>
-          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Recommended to save/repay:</div>
-          <div style="font-size:1.5rem;font-weight:700;color:#008080;">₹{{ "%.0f"|format(budget_savings) }}</div>
-          <div class="mt-2" style="font-size:0.85rem;color:var(--text-muted);">
-            Total saved across all goals: <strong style="color:#008080;">₹{{ "%.0f"|format(total_savings) }}</strong>
+          <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">This month's target:</div>
+          <div style="font-size:1.1rem;font-weight:600;color:#008080;">₹{{ "%.0f"|format(budget_savings) }}</div>
+          <div class="mt-2 pt-2" style="border-top:1px dashed rgba(0,128,128,0.25);">
+            <div class="mb-1" style="font-size:0.82rem;color:var(--text-muted);">Total savings balance:</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#008080;">₹{{ "%.0f"|format(total_savings) }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Carries forward each month</div>
           </div>
           <a href="{{ url_for('goals') }}" class="btn btn-sm mt-2" style="background:#008080;color:#fff;font-size:0.8rem;">
             <i class="bi bi-bullseye me-1"></i>View Goals
@@ -289,27 +303,31 @@
 
 <!-- Goal Suggestions by Priority -->
 {% if goal_suggestions %}
-<div class="card mb-4 reveal reveal-delay-1" style="border: 1px solid rgba(0, 128, 128,0.25);">
+<div class="card mb-4 reveal reveal-delay-1" style="border: 1px solid rgba(243,156,18,0.3);">
   <div class="card-header d-flex align-items-center justify-content-between">
-    <span><i class="bi bi-lightbulb-fill me-2" style="color:#f39c12;"></i>Where to Put Your Savings &amp; Extra Money</span>
+    <span><i class="bi bi-bullseye me-2" style="color:#f39c12;"></i>Goals Allocation from Wants Budget</span>
     <span class="badge bg-secondary" style="font-size:0.75rem;">Sorted by priority</span>
   </div>
   <div class="card-body py-2">
-    <p class="text-muted mb-3" style="font-size:0.85rem;">Based on your goal priorities, here's how to allocate your monthly savings budget of <strong>₹{{ "%.0f"|format(savings_allocated) }}</strong>:</p>
+    <p class="text-muted mb-3" style="font-size:0.85rem;">
+      <strong>{{ "%.0f"|format(goals_wants_pct) }}%</strong> of your Wants budget (₹{{ "%.0f"|format(goals_alloc) }}) is set aside for goals each month.
+      Your savings (20% = ₹{{ "%.0f"|format(budget_savings) }}) remain intact.
+      <a href="{{ url_for('settings') }}" style="color:#008080;">Change in Settings</a>
+    </p>
     <div class="row g-2">
       {% for sg in goal_suggestions %}
       <div class="col-md-4">
-        <div class="p-3 rounded-3 h-100" style="background:rgba(0, 128, 128,0.06);border:1px solid rgba(0, 128, 128,0.2);">
+        <div class="p-3 rounded-3 h-100" style="background:rgba(243,156,18,0.06);border:1px solid rgba(243,156,18,0.2);">
           <div class="d-flex align-items-center gap-2 mb-2">
-            <span style="font-size:1rem;font-weight:800;color:#008080;min-width:28px;">#{{ sg.priority }}</span>
+            <span style="font-size:1rem;font-weight:800;color:#f39c12;min-width:28px;">#{{ sg.priority }}</span>
             <span style="font-weight:600;font-size:0.88rem;">{{ sg.name }}</span>
           </div>
-          <div style="font-size:1.1rem;font-weight:700;color:#008080;">
+          <div style="font-size:1.1rem;font-weight:700;color:#f39c12;">
             ₹{{ "%.0f"|format(sg.suggested) }}
           </div>
-          <div style="font-size:0.75rem;color:var(--text-muted);">suggested this month</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">from Wants budget this month</div>
           <div style="font-size:0.75rem;color:var(--text-muted);" class="mt-1">₹{{ "%.0f"|format(sg.remaining) }} still needed</div>
-          <a href="{{ url_for('goal_detail', id=sg.id) }}" class="btn btn-sm mt-2" style="font-size:0.75rem;padding:2px 10px;background:#008080;color:#fff;">
+          <a href="{{ url_for('goal_detail', id=sg.id) }}" class="btn btn-sm mt-2" style="font-size:0.75rem;padding:2px 10px;background:#f39c12;color:#fff;">
             Add to this goal
           </a>
         </div>
