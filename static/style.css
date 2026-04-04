@@ -1601,3 +1601,116 @@ footer p {
   .card-header { padding: 0.75rem 1rem; font-size: 0.88rem; }
   .btn { padding: 0.45rem 1rem; }
 }
+
+/* =============================================
+   MOBILE BOTTOM NAVIGATION (PWA)
+   ============================================= */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 3000;
+    background: var(--gradient-brand);
+    box-shadow: 0 -2px 20px rgba(0,128,128,0.28);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.72);
+    text-decoration: none;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    gap: 3px;
+    padding: 6px 4px;
+    padding-bottom: 4px;
+    transition: color 0.18s, background 0.18s;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+    border: none;
+    background: none;
+    outline: none;
+    position: relative;
+  }
+
+  .bottom-nav-item i {
+    font-size: 1.35rem;
+    line-height: 1;
+    transition: transform 0.18s;
+  }
+
+  .bottom-nav-item:hover,
+  .bottom-nav-item:focus {
+    color: white;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .bottom-nav-item.active-bottom-nav {
+    color: white;
+  }
+
+  .bottom-nav-item.active-bottom-nav i {
+    transform: scale(1.12);
+  }
+
+  .bottom-nav-item.active-bottom-nav::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 25%;
+    right: 25%;
+    height: 3px;
+    background: white;
+    border-radius: 3px 3px 0 0;
+  }
+
+  /* Push page content above the bottom nav */
+  main {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  footer {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* =============================================
+   SAFE AREA — Notch & Home Indicator Support
+   ============================================= */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Ensure tap targets are at least 44px for mobile */
+@media (pointer: coarse) {
+  .btn, a.nav-link, .bottom-nav-item {
+    min-height: 44px;
+  }
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* PWA install banner animation */
+@keyframes slideUpIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.pwa-install-banner {
+  animation: slideUpIn 0.35s cubic-bezier(0.4,0,0.2,1);
+}

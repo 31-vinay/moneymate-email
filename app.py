@@ -928,6 +928,11 @@ def pwa_sw():
     return response
 
 
+@app.route("/offline")
+def offline():
+    return render_template("offline.html")
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
