@@ -25,6 +25,7 @@ import os
 import io
 import base64
 import imaplib
+import zipfile
 import email as email_lib
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
@@ -2457,16 +2458,62 @@ def bank_statement_upload():
     f = request.files["file"]
     filename = f.filename or ""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if ext not in ("pdf", "xlsx", "xls", "csv"):
-        return jsonify({"success": False, "message": "Unsupported file type. Please upload a PDF, Excel (.xlsx/.xls), or CSV file."})
+    if ext not in ("pdf", "xlsx", "xls", "csv", "zip"):
+        return jsonify({"success": False, "message": "Unsupported file type. Please upload a PDF, Excel (.xlsx/.xls), CSV, or ZIP file."})
     try:
         file_bytes = f.read()
-        if len(file_bytes) > 10 * 1024 * 1024:
-            return jsonify({"success": False, "message": "File too large (max 10 MB)."})
+        if len(file_bytes) > 20 * 1024 * 1024:
+            return jsonify({"success": False, "message": "File too large (max 20 MB)."})
+
+        # ── Handle ZIP: extract the first parseable statement file inside ──
+        if ext == "zip":
+            SUPPORTED = {"pdf", "xlsx", "xls", "csv"}
+            try:
+                with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+                    entries = [
+                        n for n in zf.namelist()
+                        if not n.startswith("__MACOSX")
+                        and not n.endswith("/")
+                        and n.rsplit(".", 1)[-1].lower() in SUPPORTED
+                    ]
+                    if not entries:
+                        return jsonify({"success": False, "message": "No supported statement file found inside the ZIP (expected PDF, Excel, or CSV)."})
+                    all_txns = []
+                    parsed_files = []
+                    for entry in entries:
+                        inner_bytes = zf.read(entry)
+                        inner_name  = entry.split("/")[-1]
+                        try:
+                            txns = parse_bank_statement(inner_bytes, inner_name)
+                            if txns:
+                                all_txns.extend(txns)
+                                parsed_files.append(inner_name)
+                        except Exception:
+                            continue
+                    if not all_txns:
+                        return jsonify({"success": False, "message": "No transactions could be detected in any file inside the ZIP."})
+                    # Deduplicate by (date, amount, type)
+                    seen = set()
+                    unique = []
+                    for t in all_txns:
+                        key = (t["date"], t["amount"], t["type"])
+                        if key not in seen:
+                            seen.add(key)
+                            unique.append(t)
+                    return jsonify({
+                        "success": True,
+                        "transactions": unique,
+                        "count": len(unique),
+                        "source": f"ZIP ({', '.join(parsed_files)})",
+                    })
+            except zipfile.BadZipFile:
+                return jsonify({"success": False, "message": "The uploaded file is not a valid ZIP archive."})
+
+        # ── Direct file upload ──
         txns = parse_bank_statement(file_bytes, filename)
         if not txns:
             return jsonify({"success": False, "message": "No transactions could be detected. Make sure the file is a standard bank statement with Date, Description, and Amount columns."})
-        return jsonify({"success": True, "transactions": txns, "count": len(txns)})
+        return jsonify({"success": True, "transactions": txns, "count": len(txns), "source": filename})
     except Exception as e:
         return jsonify({"success": False, "message": f"Parsing failed: {str(e)}"})
 
