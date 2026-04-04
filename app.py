@@ -272,7 +272,7 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
     mail.login(email_addr, password)
     mail.select("INBOX")
 
-    since_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%d-%b-%Y")
+    since_date = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)).strftime("%d-%b-%Y")
     _, message_ids = mail.search(None, f"SINCE {since_date}")
     msg_ids = message_ids[0].split()
     # Process most recent first, cap at 300
@@ -312,7 +312,7 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
             try:
                 txn_date = parsedate_to_datetime(date_str).strftime("%Y-%m-%d")
             except Exception:
-                txn_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                txn_date = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
 
             transactions.append({
                 "msg_id":      msg_id,
@@ -631,7 +631,7 @@ def classify_essential_keywords(text):
 
 # Helper: detect recurring subscriptions
 def detect_subscriptions(user_id, months_back=3):
-    since_date = datetime.now(timezone.utc) - timedelta(days=30 * months_back)
+    since_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30 * months_back)
     expenses = Expense.query.filter(
         Expense.user_id == user_id, Expense.date >= since_date
     ).all()
@@ -697,7 +697,7 @@ def detect_subscriptions(user_id, months_back=3):
 # Helper: get spending reduction suggestions
 def get_spending_suggestions(user_id, goal):
     # Get last 3 months of expenses
-    since_date = datetime.now(timezone.utc) - timedelta(days=90)
+    since_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=90)
     expenses = Expense.query.filter(
         Expense.user_id == user_id,
         Expense.date >= since_date,
@@ -745,7 +745,7 @@ def get_spending_suggestions(user_id, goal):
 def run_monthly_reset(user):
     """Monthly rollover: carry recurring entries forward to the new month,
     delete all old-month data, and carry leftover balance into savings."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     last_reset = user.last_monthly_reset
 
     if last_reset is None:
@@ -868,7 +868,7 @@ def run_monthly_reset(user):
 
 def check_subscription_expiry(user_id):
     """Check for expired or expiring subscriptions and return alerts."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     alerts = []
 
     subscriptions = Expense.query.filter(
@@ -1137,7 +1137,7 @@ def request_account_info():
         incomes=incomes,
         expenses=expenses,
         goals=goals,
-        now=datetime.now(timezone.utc),
+        now=datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
 
@@ -1200,7 +1200,7 @@ def dashboard():
         elif alert["type"] == "expiring":
             flash(f"🔔 Your subscription '{alert['name']}' expires in {alert['days_left']} day(s) on {alert['end_date'].strftime('%d %b %Y')}.", "info")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_start = datetime(now.year, now.month, 1)
 
     # Expenses this month
@@ -1416,7 +1416,7 @@ def add_income():
         if date_received:
             date_received = datetime.combine(date_received, datetime.min.time())
         else:
-            date_received = datetime.now(timezone.utc)
+            date_received = datetime.now(timezone.utc).replace(tzinfo=None)
         income = Income(
             user_id=current_user.id,
             source=form.source.data,
@@ -1528,7 +1528,7 @@ def add_expense():
                 form.custom_category.data,
             )
 
-            exp_date = datetime.now(timezone.utc)
+            exp_date = datetime.now(timezone.utc).replace(tzinfo=None)
             if form.date.data:
                 exp_date = datetime.combine(form.date.data, datetime.min.time())
             sub_start = None
@@ -1569,7 +1569,7 @@ def add_expense():
 
     expense_query = Expense.query.filter_by(user_id=current_user.id)
     if exp_filter_days:
-        since = datetime.now(timezone.utc) - timedelta(days=exp_filter_days)
+        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=exp_filter_days)
         expense_query = expense_query.filter(Expense.date >= since)
         exp_filter_label = f"Last {exp_filter_days} day{'s' if exp_filter_days != 1 else ''}"
     else:
@@ -1704,7 +1704,7 @@ def subscriptions():
             sub["sub_start_date"] = None
             sub["sub_end_date"] = None
             sub["expense_id"] = None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     return render_template(
         "subscriptions.html", subscriptions=subs, total_cost=total_cost, now=now
     )
@@ -1799,7 +1799,7 @@ def goal_detail(id):
     milestones = []
     if goal.monthly_savings > 0:
         for month in range(1, min(13, int(goal.estimated_months) + 1)):
-            milestone_date = datetime.now(timezone.utc) + timedelta(days=30 * month)
+            milestone_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30 * month)
             milestone_amount = goal.saved_amount + (goal.monthly_savings * month)
             milestones.append(
                 {
@@ -1853,7 +1853,7 @@ def what_if(id):
     months = remaining / total_monthly
 
 
-    estimated_date = datetime.now(timezone.utc) + timedelta(days=30 * months)
+    estimated_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30 * months)
 
     return jsonify(
         {
@@ -2012,7 +2012,7 @@ def chart_category_breakdown(categories, dark_mode=False):
 @app.route("/analysis")
 @login_required
 def analysis():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_start = datetime(now.year, now.month, 1)
     six_months_ago = now - timedelta(days=180)
 

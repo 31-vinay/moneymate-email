@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 db = SQLAlchemy()
 
 def _now():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,4 +75,4 @@ class Goal(db.Model):
     def estimated_date(self):
         if self.estimated_months == float('inf'):
             return None
-        return datetime.now(timezone.utc) + timedelta(days=30 * self.estimated_months)
+        return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30 * self.estimated_months)
