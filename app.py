@@ -2444,6 +2444,10 @@ def analysis():
         date_from = datetime(date_from.year, date_from.month, 1)
         date_to   = now
         range_label = "Past 6 Months"
+    elif dr == "all_time":
+        date_from = datetime(2000, 1, 1)
+        date_to   = now
+        range_label = "All Time"
     elif dr == "custom" and custom_from and custom_to:
         try:
             date_from = datetime.strptime(custom_from, "%Y-%m-%d")

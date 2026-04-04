@@ -28,6 +28,7 @@
         ('2months',    'Past 2 Months'),
         ('3months',    'Past 3 Months'),
         ('6months',    'Past 6 Months'),
+        ('all_time',   'All Time'),
       ] %}
       {% for key, label in presets %}
       <a href="{{ url_for('analysis', dr=key) }}"
