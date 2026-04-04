@@ -6,7 +6,10 @@
     <h4 class="mb-0 fw-bold" style="color: var(--text-primary);">
       <i class="bi bi-hand-wave me-2" style="color: var(--brand-primary);"></i>Welcome back, <span style="color: var(--brand-primary);">{{ current_user.username }}</span>!
     </h4>
-    <p class="text-muted mb-0" style="font-size:0.88rem;">Here's your financial snapshot for this month.</p>
+    <p class="text-muted mb-0" style="font-size:0.88rem;">
+      Financial snapshot for
+      <strong>{{ selected_month_label }}</strong>{% if not is_current_month %} <a href="/dashboard" class="ms-1" style="font-size:0.8rem;">(back to current)</a>{% endif %}
+    </p>
   </div>
   <div class="d-flex align-items-center gap-3 flex-wrap">
     <div class="dashboard-clock">
@@ -34,6 +37,20 @@
         setInterval(updateClock, 1000);
       })();
     </script>
+    <!-- Month picker -->
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-calendar3 me-1"></i>{{ selected_month_label }}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% for val, label in month_options %}
+        <li>
+          <a class="dropdown-item {% if val == selected_month_str %}active{% endif %}"
+             href="{{ url_for('dashboard', month=val) }}">{{ label }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
     <div class="d-flex gap-2">
       <a href="{{ url_for('add_income') }}" class="btn btn-success btn-sm"><i class="bi bi-plus me-1"></i>Income</a>
       <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Expense</a>

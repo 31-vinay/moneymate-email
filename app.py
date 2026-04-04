@@ -1224,11 +1224,37 @@ def dashboard():
             flash(f"🔔 Your subscription '{alert['name']}' expires in {alert['days_left']} day(s) on {alert['end_date'].strftime('%d %b %Y')}.", "info")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    month_start = datetime(now.year, now.month, 1)
+
+    # Allow browsing past months via ?month=YYYY-MM
+    selected_month_str = request.args.get("month", "")
+    try:
+        sel_dt = datetime.strptime(selected_month_str, "%Y-%m")
+        view_year, view_month = sel_dt.year, sel_dt.month
+    except ValueError:
+        view_year, view_month = now.year, now.month
+    month_start = datetime(view_year, view_month, 1)
+    # End of selected month
+    if view_month == 12:
+        month_end = datetime(view_year + 1, 1, 1)
+    else:
+        month_end = datetime(view_year, view_month + 1, 1)
+    is_current_month = (view_year == now.year and view_month == now.month)
+    # List last 12 months for the picker
+    month_options = []
+    for i in range(12):
+        mo = now.month - i
+        yo = now.year
+        while mo <= 0:
+            mo += 12
+            yo -= 1
+        month_options.append((f"{yo:04d}-{mo:02d}", datetime(yo, mo, 1).strftime("%b %Y")))
+    selected_month_label = datetime(view_year, view_month, 1).strftime("%B %Y")
 
     # Expenses this month
     expenses = Expense.query.filter(
-        Expense.user_id == current_user.id, Expense.date >= month_start
+        Expense.user_id == current_user.id,
+        Expense.date >= month_start,
+        Expense.date < month_end,
     ).all()
     total_spent = sum(e.amount for e in expenses)
     essential_spent = sum(e.amount for e in expenses if e.is_essential)
@@ -1244,7 +1270,9 @@ def dashboard():
 
     # Income this month
     incomes = Income.query.filter(
-        Income.user_id == current_user.id, Income.date_received >= month_start
+        Income.user_id == current_user.id,
+        Income.date_received >= month_start,
+        Income.date_received < month_end,
     ).all()
     total_income = sum(i.amount for i in incomes)
     source_breakdown = {}
@@ -1255,28 +1283,52 @@ def dashboard():
         for src, amt in source_breakdown.items()
     }
 
-    # Recent incomes — today and yesterday only
-    yesterday_start = datetime(now.year, now.month, now.day) - timedelta(days=1)
-    recent_incomes = (
-        Income.query.filter(
-            Income.user_id == current_user.id,
-            Income.date_received >= yesterday_start,
+    # Recent transactions: today+yesterday for current month, all entries for past months
+    if is_current_month:
+        yesterday_start = datetime(now.year, now.month, now.day) - timedelta(days=1)
+        recent_incomes = (
+            Income.query.filter(
+                Income.user_id == current_user.id,
+                Income.date_received >= yesterday_start,
+            )
+            .order_by(Income.date_received.desc())
+            .all()
         )
-        .order_by(Income.date_received.desc())
-        .all()
-    )
-    # Recent expenses — today and yesterday only
-    recent_expenses = (
-        Expense.query.filter(
-            Expense.user_id == current_user.id,
-            Expense.date >= yesterday_start,
+        recent_expenses = (
+            Expense.query.filter(
+                Expense.user_id == current_user.id,
+                Expense.date >= yesterday_start,
+            )
+            .order_by(Expense.date.desc())
+            .all()
         )
-        .order_by(Expense.date.desc())
-        .all()
-    )
+    else:
+        recent_incomes = (
+            Income.query.filter(
+                Income.user_id == current_user.id,
+                Income.date_received >= month_start,
+                Income.date_received < month_end,
+            )
+            .order_by(Income.date_received.desc())
+            .limit(30)
+            .all()
+        )
+        recent_expenses = (
+            Expense.query.filter(
+                Expense.user_id == current_user.id,
+                Expense.date >= month_start,
+                Expense.date < month_end,
+            )
+            .order_by(Expense.date.desc())
+            .limit(30)
+            .all()
+        )
 
-    # Burn rate
-    days_passed = (now - month_start).days + 1
+    # Burn rate (use actual days elapsed for current month; full month for past months)
+    if is_current_month:
+        days_passed = max(1, (now - month_start).days + 1)
+    else:
+        days_passed = max(1, (month_end - month_start).days)
     burn_rate = total_spent / days_passed if days_passed > 0 else 0
 
     # Subscriptions (detected)
@@ -1323,12 +1375,15 @@ def dashboard():
     goals_alloc = round(budget_wants * goals_wants_pct / 100, 2)
     free_wants = round(budget_wants - goals_alloc, 2)
 
-    # Month-end prediction
-    days_in_month = calendar.monthrange(now.year, now.month)[1]
-    days_remaining = days_in_month - now.day
+    # Month-end prediction (only meaningful for current month)
+    days_in_month = calendar.monthrange(view_year, view_month)[1]
+    if is_current_month:
+        days_remaining = days_in_month - now.day
+    else:
+        days_remaining = 0
     projected_month_end_spend = total_spent + (burn_rate * days_remaining)
     predicted_balance = total_income - projected_month_end_spend
-    show_month_forecast_warning = (days_remaining <= 10) and (predicted_balance < 0)
+    show_month_forecast_warning = is_current_month and (days_remaining <= 10) and (predicted_balance < 0)
 
     # Personalized saving tips for the warning alert
     shortfall = abs(predicted_balance) if predicted_balance < 0 else 0
@@ -1416,6 +1471,10 @@ def dashboard():
         required_daily_savings=required_daily_savings,
         top_non_essential_cats=top_non_essential_cats,
         top_subs=top_subs,
+        month_options=month_options,
+        selected_month_label=selected_month_label,
+        selected_month_str=f"{view_year:04d}-{view_month:02d}",
+        is_current_month=is_current_month,
     )
 
 
@@ -2603,6 +2662,7 @@ def bank_statement_upload():
 def bank_statement_import():
     items = request.get_json(force=True).get("transactions", [])
     imported_count = 0
+    skipped_count  = 0
     for txn in items:
         try:
             txn_date = datetime.strptime(txn["date"], "%Y-%m-%d")
@@ -2610,16 +2670,35 @@ def bank_statement_import():
             desc     = txn.get("description", "")[:200]
             txn_type = txn.get("type", "expense")
             if txn_type == "income":
-                inc = Income(
+                exists = Income.query.filter_by(
                     user_id=current_user.id,
                     source="Bank Import",
                     amount=amount,
                     date_received=txn_date,
                     description=desc,
-                )
-                db.session.add(inc)
+                ).first()
+                if exists:
+                    skipped_count += 1
+                    continue
+                db.session.add(Income(
+                    user_id=current_user.id,
+                    source="Bank Import",
+                    amount=amount,
+                    date_received=txn_date,
+                    description=desc,
+                ))
             else:
-                exp = Expense(
+                exists = Expense.query.filter_by(
+                    user_id=current_user.id,
+                    category="Uncategorized",
+                    amount=amount,
+                    date=txn_date,
+                    description=desc,
+                ).first()
+                if exists:
+                    skipped_count += 1
+                    continue
+                db.session.add(Expense(
                     user_id=current_user.id,
                     category="Uncategorized",
                     amount=amount,
@@ -2627,13 +2706,12 @@ def bank_statement_import():
                     description=desc,
                     is_essential=False,
                     is_subscription=False,
-                )
-                db.session.add(exp)
+                ))
             imported_count += 1
         except Exception:
             continue
     db.session.commit()
-    return jsonify({"success": True, "imported": imported_count})
+    return jsonify({"success": True, "imported": imported_count, "skipped": skipped_count})
 
 
 if __name__ == "__main__":
