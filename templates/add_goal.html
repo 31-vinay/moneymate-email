@@ -5,7 +5,7 @@
 
   <!-- Create Goal Form -->
   <div class="col-lg-5">
-    <div class="card fade-in">
+    <div class="card reveal">
       <div class="card-header"><i class="bi bi-bullseye"></i> Create New Goal</div>
       <div class="card-body p-4">
         <form method="POST">
@@ -29,6 +29,7 @@
               {% if form.target_amount.errors %}
                 {% for err in form.target_amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
               {% endif %}
+              <div class="field-feedback" id="fb_target"></div>
             </div>
             <div class="col-md-6">
               {{ form.monthly_savings.label(class="form-label") }}
@@ -40,6 +41,7 @@
               {% if form.monthly_savings.errors %}
                 {% for err in form.monthly_savings.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
               {% endif %}
+              <div class="field-feedback" id="fb_monthly"></div>
             </div>
           </div>
 
@@ -78,7 +80,7 @@
   </div>
 
   <!-- Goals List -->
-  <div class="col-lg-7 fade-in fade-in-delay-1">
+  <div class="col-lg-7 reveal">
     <div class="card">
       <div class="card-header d-flex align-items-center gap-2">
         <i class="bi bi-list-ul"></i> Your Goals
@@ -163,6 +165,31 @@ function calculatePreview() {
 
 targetInput.addEventListener('input', calculatePreview);
 savingsInput.addEventListener('input', calculatePreview);
+
+(function() {
+  function setFb(fbId, inputEl, ok, msg) {
+    var fb = document.getElementById(fbId);
+    if (!fb) return;
+    fb.innerHTML = (ok ? '<i class="bi bi-check-circle-fill"></i> ' : '<i class="bi bi-x-circle-fill"></i> ') + msg;
+    fb.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+    inputEl.classList.toggle('is-valid-animated', ok);
+    inputEl.classList.toggle('is-invalid-animated', !ok);
+  }
+  if (targetInput) {
+    targetInput.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = parseFloat(this.value) > 0;
+      setFb('fb_target', this, ok, ok ? 'Valid target amount.' : 'Target must be greater than 0.');
+    });
+  }
+  if (savingsInput) {
+    savingsInput.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = parseFloat(this.value) > 0;
+      setFb('fb_monthly', this, ok, ok ? 'Monthly savings amount set.' : 'Savings must be greater than 0.');
+    });
+  }
+})();
 </script>
 
 {% endblock %}

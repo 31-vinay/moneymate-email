@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+<div class="d-flex justify-content-between align-items-center mb-4 reveal">
   <div>
     <h4 class="fw-bold mb-0" style="color:var(--text-primary);">
       <i class="bi bi-bullseye me-2" style="color:var(--brand-primary);"></i>Financial Goals
@@ -16,7 +16,7 @@
 {% if goals %}
 <div class="row g-3">
   {% for goal in goals %}
-  <div class="col-md-6 fade-in" style="animation-delay: {{ loop.index0 * 0.08 }}s;">
+  <div class="col-md-6 reveal" style="transition-delay: {{ loop.index0 * 0.08 }}s;">
     <div class="card h-100 goal-card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-flag me-2"></i>{{ goal.name }}</span>
@@ -96,7 +96,7 @@
   {% endfor %}
 </div>
 {% else %}
-<div class="card fade-in">
+<div class="card reveal">
   <div class="card-body text-center py-5">
     <div style="font-size:4rem;margin-bottom:1rem;opacity:0.4;">🎯</div>
     <h4 class="mb-2">No Goals Yet</h4>

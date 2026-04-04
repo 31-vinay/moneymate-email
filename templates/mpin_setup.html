@@ -76,7 +76,7 @@
 </style>
 
 <div class="mpin-wrap">
-  <div class="mpin-card fade-in">
+  <div class="mpin-card reveal">
     <div class="mpin-header">
       <div class="mpin-icon"><i class="bi bi-shield-lock-fill"></i></div>
       {% if mode == 'change' %}
@@ -148,6 +148,7 @@
             <span class="input-group-text"><i class="bi bi-lock"></i></span>
             <input type="password" id="pwdInput" class="form-control" placeholder="Enter your password">
           </div>
+          <div class="field-feedback" id="fb_mpin_pwd"></div>
         </div>
         <button type="button" class="btn-auth" onclick="submitForm()">
           <i class="bi bi-shield-check me-2"></i>Save MPIN
@@ -234,13 +235,50 @@ function advance(which) {
 }
 
 function submitForm() {
-  const pwd = document.getElementById('pwdInput') ? document.getElementById('pwdInput').value : '';
+  const pwdEl = document.getElementById('pwdInput');
+  const pwd = pwdEl ? pwdEl.value : '';
+  if (pwdEl && !pwd) {
+    var fb = document.getElementById('fb_mpin_pwd');
+    if (fb) {
+      fb.innerHTML = '<i class="bi bi-x-circle-fill"></i> Password is required.';
+      fb.className = 'field-feedback show invalid';
+    }
+    pwdEl.classList.add('is-invalid-animated');
+    return;
+  }
+  if (pwdEl && pwd) {
+    var fb = document.getElementById('fb_mpin_pwd');
+    if (fb) {
+      fb.innerHTML = '<i class="bi bi-check-circle-fill"></i> Password verified.';
+      fb.className = 'field-feedback show valid';
+    }
+    pwdEl.classList.remove('is-invalid-animated');
+    pwdEl.classList.add('is-valid-animated');
+  }
   document.getElementById('f_old_pin').value     = pins.old;
   document.getElementById('f_new_pin').value     = pins.new;
   document.getElementById('f_confirm_pin').value = pins.confirm;
   document.getElementById('f_password').value    = pwd;
   document.getElementById('mpinForm').submit();
 }
+
+(function() {
+  var pwdEl = document.getElementById('pwdInput');
+  if (pwdEl) {
+    pwdEl.addEventListener('blur', function() {
+      if (!this.value) return;
+      var fb = document.getElementById('fb_mpin_pwd');
+      if (fb) {
+        var ok = this.value.length >= 4;
+        fb.innerHTML = (ok ? '<i class="bi bi-check-circle-fill"></i> ' : '<i class="bi bi-x-circle-fill"></i> ') +
+          (ok ? 'Password entered.' : 'Password is too short.');
+        fb.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+        this.classList.toggle('is-valid-animated', ok);
+        this.classList.toggle('is-invalid-animated', !ok);
+      }
+    });
+  }
+})();
 </script>
 
 <style>

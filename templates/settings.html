@@ -81,7 +81,7 @@
   </div>
 
   <!-- ── Account ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-person-fill"></i></div>
       <div>
@@ -109,12 +109,14 @@
             <form method="POST" action="{{ url_for('change_email') }}">
               <div class="row g-2">
                 <div class="col-12 col-sm-6">
-                  <input type="email" name="new_email" class="form-control form-control-sm"
+                  <input type="email" name="new_email" id="s_new_email" class="form-control form-control-sm"
                          placeholder="New email address" required>
+                  <div class="field-feedback" id="fb_s_new_email"></div>
                 </div>
                 <div class="col-12 col-sm-6">
-                  <input type="password" name="current_password" class="form-control form-control-sm"
+                  <input type="password" name="current_password" id="s_email_pwd" class="form-control form-control-sm"
                          placeholder="Current password" required>
+                  <div class="field-feedback" id="fb_s_email_pwd"></div>
                 </div>
               </div>
               <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 mt-2">
@@ -128,7 +130,7 @@
   </div>
 
   <!-- ── Appearance ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal reveal-delay-1">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-palette-fill"></i></div>
       <div>
@@ -149,7 +151,7 @@
   </div>
 
   <!-- ── Notifications ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal reveal-delay-2">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-bell-fill"></i></div>
       <div>
@@ -176,7 +178,7 @@
   </div>
 
   <!-- ── Security ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal reveal-delay-3">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-shield-lock-fill"></i></div>
       <div>
@@ -186,19 +188,22 @@
     </div>
     <div class="settings-card-body">
       <p class="settings-section-label"><i class="bi bi-lock me-1"></i>Change Password</p>
-      <form method="POST" action="{{ url_for('change_password') }}" class="mb-1">
+      <form method="POST" action="{{ url_for('change_password') }}" class="mb-1" id="changePasswordForm">
         <div class="row g-2">
           <div class="col-12 col-sm-4">
-            <input type="password" name="current_password" class="form-control form-control-sm"
+            <input type="password" name="current_password" id="s_cur_pwd" class="form-control form-control-sm"
                    placeholder="Current password" required>
+            <div class="field-feedback" id="fb_s_cur_pwd"></div>
           </div>
           <div class="col-12 col-sm-4">
-            <input type="password" name="new_password" class="form-control form-control-sm"
+            <input type="password" name="new_password" id="s_new_pwd" class="form-control form-control-sm"
                    placeholder="New password" required minlength="4">
+            <div class="field-feedback" id="fb_s_new_pwd"></div>
           </div>
           <div class="col-12 col-sm-4">
-            <input type="password" name="confirm_password" class="form-control form-control-sm"
+            <input type="password" name="confirm_password" id="s_confirm_pwd" class="form-control form-control-sm"
                    placeholder="Confirm new password" required minlength="4">
+            <div class="field-feedback" id="fb_s_confirm_pwd"></div>
           </div>
         </div>
         <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 mt-2">
@@ -238,7 +243,7 @@
   </div>
 
   <!-- ── Email Import ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-envelope-arrow-down"></i></div>
       <div>
@@ -255,7 +260,7 @@
   </div>
 
   <!-- ── Invite a Friend ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal reveal-delay-1">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-people-fill"></i></div>
       <div>
@@ -285,7 +290,7 @@
   </div>
 
   <!-- ── Request Account Info ── -->
-  <div class="settings-card">
+  <div class="settings-card reveal reveal-delay-2">
     <div class="settings-card-header">
       <div class="card-icon"><i class="bi bi-file-earmark-person-fill"></i></div>
       <div>
@@ -302,7 +307,7 @@
   </div>
 
   <!-- ── Reset Account ── -->
-  <div class="settings-card" style="border-color:rgba(243,156,18,0.35);">
+  <div class="settings-card reveal" style="border-color:rgba(243,156,18,0.35);">
     <div class="settings-card-header" style="background:linear-gradient(135deg,#e67e22,#f39c12);">
       <div class="card-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
       <div>
@@ -320,7 +325,7 @@
   </div>
 
   <!-- ── Account Actions (delete) ── -->
-  <div class="settings-card" style="border-color:rgba(255, 146, 77,0.25);">
+  <div class="settings-card reveal reveal-delay-1" style="border-color:rgba(255, 146, 77,0.25);">
     <div class="settings-card-header" style="background:linear-gradient(135deg,#c0392b,#e74c3c);">
       <div class="card-icon"><i class="bi bi-person-x-fill"></i></div>
       <div>
@@ -457,6 +462,59 @@ function copyInviteLink() {
     setTimeout(function() { btn.textContent = 'Copy Link'; }, 2000);
   });
 }
+
+(function() {
+  function setFb(fbId, inputEl, ok, msg) {
+    var fb = document.getElementById(fbId);
+    if (!fb || !inputEl) return;
+    fb.innerHTML = (ok ? '<i class="bi bi-check-circle-fill"></i> ' : '<i class="bi bi-x-circle-fill"></i> ') + msg;
+    fb.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+    inputEl.classList.toggle('is-valid-animated', ok);
+    inputEl.classList.toggle('is-invalid-animated', !ok);
+  }
+
+  var curPwd = document.getElementById('s_cur_pwd');
+  if (curPwd) {
+    curPwd.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = this.value.length >= 4;
+      setFb('fb_s_cur_pwd', this, ok, ok ? 'Current password entered.' : 'Too short.');
+    });
+  }
+  var newPwd = document.getElementById('s_new_pwd');
+  if (newPwd) {
+    newPwd.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = this.value.length >= 6;
+      setFb('fb_s_new_pwd', this, ok, ok ? 'Strong enough.' : 'At least 6 characters required.');
+    });
+  }
+  var confirmPwd = document.getElementById('s_confirm_pwd');
+  if (confirmPwd) {
+    confirmPwd.addEventListener('blur', function() {
+      if (!this.value) return;
+      var newPwdEl = document.getElementById('s_new_pwd');
+      var ok = newPwdEl && this.value === newPwdEl.value && this.value.length >= 4;
+      setFb('fb_s_confirm_pwd', this, ok, ok ? 'Passwords match.' : 'Passwords do not match.');
+    });
+  }
+  var newEmail = document.getElementById('s_new_email');
+  if (newEmail) {
+    newEmail.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
+      setFb('fb_s_new_email', this, ok, ok ? 'Valid email address.' : 'Enter a valid email.');
+    });
+  }
+  var emailPwd = document.getElementById('s_email_pwd');
+  if (emailPwd) {
+    emailPwd.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = this.value.length >= 4;
+      setFb('fb_s_email_pwd', this, ok, ok ? 'Password entered.' : 'Too short.');
+    });
+  }
+})();
 </script>
 
 {% endblock %}

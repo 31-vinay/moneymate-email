@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="mb-3 fade-in d-flex gap-2">
+<div class="mb-3 reveal d-flex gap-2">
   <a href="{{ url_for('goals') }}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-arrow-left me-1"></i>Back to Goals
   </a>
@@ -13,7 +13,7 @@
 <div class="row g-3">
   <!-- Goal Overview -->
   <div class="col-md-6">
-    <div class="card h-100 fade-in">
+    <div class="card h-100 reveal">
       <div class="card-header"><i class="bi bi-flag me-1"></i>{{ goal.name }}</div>
       <div class="card-body">
 
@@ -109,7 +109,7 @@
 
   <!-- What-If Simulator -->
   <div class="col-md-6">
-    <div class="card h-100 fade-in fade-in-delay-1">
+    <div class="card h-100 reveal reveal-delay-1">
       <div class="card-header"><i class="bi bi-sliders me-1"></i> What-If Simulator</div>
       <div class="card-body">
         <div class="mb-3">
@@ -152,7 +152,7 @@
 
 <!-- Spending Suggestions -->
 {% if suggestions %}
-<div class="card mt-3 fade-in fade-in-delay-2">
+<div class="card mt-3 reveal reveal-delay-2">
   <div class="card-header"><i class="bi bi-lightbulb me-1"></i> Spending Reduction Suggestions</div>
   <div class="card-body">
     <div class="row g-3">
@@ -176,7 +176,7 @@
 
 <!-- Milestones -->
 {% if milestones %}
-<div class="card mt-3 fade-in fade-in-delay-3">
+<div class="card mt-3 reveal reveal-delay-3">
   <div class="card-header"><i class="bi bi-calendar3 me-1"></i> Monthly Milestones</div>
   <div class="card-body p-0">
     <div class="table-responsive">

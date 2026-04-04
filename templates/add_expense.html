@@ -17,7 +17,7 @@
 
   <!-- Add / Edit Form -->
   <div class="col-lg-5">
-    <div class="card fade-in">
+    <div class="card reveal">
       <div class="card-header">
         <i class="bi bi-{% if edit %}pencil{% else %}wallet2{% endif %}"></i>
         {% if edit %}Edit Expense{% else %}Add New Expense{% endif %}
@@ -53,11 +53,12 @@
             {{ form.amount.label(class="form-label") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-currency-rupee"></i></span>
-              {{ form.amount(class="form-control", type="number", step="0.01", placeholder="0.00") }}
+              {{ form.amount(class="form-control", type="number", step="0.01", placeholder="0.00", id="expense_amount") }}
             </div>
             {% if form.amount.errors %}
               {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
             {% endif %}
+            <div class="field-feedback" id="fb_expense_amount"></div>
           </div>
 
           <div class="mb-3">
@@ -114,7 +115,7 @@
   </div>
 
   <!-- Expenses List -->
-  <div class="col-lg-7 fade-in fade-in-delay-1">
+  <div class="col-lg-7 reveal reveal-delay-1">
     <!-- Day filter bar -->
     <div class="card mb-2">
       <div class="card-body py-2 px-3">
@@ -288,6 +289,23 @@ document.getElementById('subCategory').addEventListener('change', function() {
         customCategoryInput.value = '';
     }
 });
+
+(function() {
+  var amtEl = document.getElementById('expense_amount');
+  var fbEl  = document.getElementById('fb_expense_amount');
+  if (!amtEl || !fbEl) return;
+  amtEl.addEventListener('blur', function() {
+    var v = parseFloat(this.value);
+    if (!this.value) return;
+    var ok = v > 0;
+    fbEl.innerHTML = ok
+      ? '<i class="bi bi-check-circle-fill"></i> Valid amount'
+      : '<i class="bi bi-x-circle-fill"></i> Amount must be greater than 0';
+    fbEl.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+    this.classList.toggle('is-valid-animated', ok);
+    this.classList.toggle('is-invalid-animated', !ok);
+  });
+})();
 
 {% if edit %}
 document.addEventListener('DOMContentLoaded', function() {

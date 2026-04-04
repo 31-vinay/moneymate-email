@@ -86,7 +86,7 @@
 </style>
 
 <div class="auth-wrap">
-  <div class="auth-card fade-in">
+  <div class="auth-card reveal">
     <div class="auth-header">
       <div class="auth-icon" id="headerIcon"><i class="bi bi-person-fill"></i></div>
       <h3 id="headerTitle">Welcome Back</h3>
@@ -107,6 +107,7 @@
                      value="{{ prefill_email or '' }}"
                      autocomplete="email">
             </div>
+            <div class="field-feedback" id="fb_login_email"></div>
             <small id="emailError" class="text-danger" style="display:none;"></small>
           </div>
           <button type="submit" class="btn-auth" id="continueBtn">
@@ -171,6 +172,7 @@
               <input type="password" name="password" id="pwdInput" class="form-control"
                      placeholder="Enter your password" autocomplete="current-password">
             </div>
+            <div class="field-feedback" id="fb_login_pwd"></div>
           </div>
           <button type="submit" class="btn-auth">
             <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
@@ -297,6 +299,33 @@ function showEmailError(msg) {
   el.textContent = msg; el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 3500);
 }
+
+(function() {
+  function setFb(fbId, inputEl, ok, msg) {
+    var fb = document.getElementById(fbId);
+    if (!fb || !inputEl) return;
+    fb.innerHTML = (ok ? '<i class="bi bi-check-circle-fill"></i> ' : '<i class="bi bi-x-circle-fill"></i> ') + msg;
+    fb.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+    inputEl.classList.toggle('is-valid-animated', ok);
+    inputEl.classList.toggle('is-invalid-animated', !ok);
+  }
+  var emailEl = document.getElementById('emailInput');
+  if (emailEl) {
+    emailEl.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
+      setFb('fb_login_email', this, ok, ok ? 'Email looks good.' : 'Enter a valid email address.');
+    });
+  }
+  var pwdEl = document.getElementById('pwdInput');
+  if (pwdEl) {
+    pwdEl.addEventListener('blur', function() {
+      if (!this.value) return;
+      var ok = this.value.length >= 4;
+      setFb('fb_login_pwd', this, ok, ok ? 'Password entered.' : 'Password is too short.');
+    });
+  }
+})();
 </script>
 
 {% endblock %}

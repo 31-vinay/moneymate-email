@@ -52,3 +52,5 @@ matplotlib
 sqlalchemy
 werkzeug
 wtforms
+openpyxl
+pdfplumber

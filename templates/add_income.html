@@ -5,7 +5,7 @@
 
   <!-- Add / Edit Form -->
   <div class="col-lg-5">
-    <div class="card fade-in">
+    <div class="card reveal">
       <div class="card-header">
         <i class="bi bi-{% if edit %}pencil{% else %}cash-coin{% endif %}"></i>
         {% if edit %}Edit Income{% else %}Add Income{% endif %}
@@ -21,11 +21,12 @@
             {{ form.amount.label(class="form-label") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-currency-rupee"></i></span>
-              {{ form.amount(class="form-control", placeholder="0.00", step="0.01") }}
+              {{ form.amount(class="form-control", placeholder="0.00", step="0.01", id="income_amount") }}
             </div>
             {% if form.amount.errors %}
               {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
             {% endif %}
+            <div class="field-feedback" id="fb_income_amount"></div>
           </div>
           <div class="mb-3">
             {{ form.date_received.label(class="form-label") }}
@@ -58,7 +59,7 @@
   </div>
 
   <!-- Income List -->
-  <div class="col-lg-7 fade-in fade-in-delay-1">
+  <div class="col-lg-7 reveal reveal-delay-1">
     <div class="card">
       <div class="card-header">
         <i class="bi bi-list-ul"></i> All Income
@@ -128,4 +129,25 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var amtEl = document.getElementById('income_amount');
+  var fbEl  = document.getElementById('fb_income_amount');
+  if (!amtEl || !fbEl) return;
+  amtEl.addEventListener('blur', function() {
+    var v = parseFloat(this.value);
+    if (!this.value) return;
+    var ok = v > 0;
+    fbEl.innerHTML = ok
+      ? '<i class="bi bi-check-circle-fill"></i> Valid amount'
+      : '<i class="bi bi-x-circle-fill"></i> Amount must be greater than 0';
+    fbEl.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+    this.classList.toggle('is-valid-animated', ok);
+    this.classList.toggle('is-invalid-animated', !ok);
+  });
+})();
+</script>
 {% endblock %}

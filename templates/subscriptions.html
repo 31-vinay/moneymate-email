@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-4 fade-in">
+<div class="d-flex align-items-center justify-content-between mb-4 reveal">
   <div>
     <h4 class="fw-bold mb-0" style="color:var(--text-primary);">
       <i class="bi bi-arrow-repeat me-2" style="color:var(--brand-primary);"></i>Detected Subscriptions
@@ -11,7 +11,7 @@
 </div>
 
 {% if subscriptions %}
-<div class="card mb-4 fade-in">
+<div class="card mb-4 reveal reveal-delay-1">
   <div class="card-header"><i class="bi bi-list-ul"></i> All Recurring Payments</div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -96,7 +96,7 @@
   </div>
 </div>
 
-<div class="row g-3 fade-in fade-in-delay-1">
+<div class="row g-3 reveal reveal-delay-2">
   <div class="col-md-5">
     <div class="stat-card stat-expense" style="height:100%;">
       <div class="stat-icon"><i class="bi bi-receipt"></i></div>
@@ -119,7 +119,7 @@
 </div>
 
 {% else %}
-<div class="card fade-in">
+<div class="card reveal">
   <div class="card-body text-center py-5">
     <div style="font-size:4rem;margin-bottom:1rem;opacity:0.4;">🔄</div>
     <h4 class="mb-2">No Subscriptions Detected</h4>

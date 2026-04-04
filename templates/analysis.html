@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-4 fade-in flex-wrap gap-3">
+<div class="d-flex align-items-center justify-content-between mb-4 reveal flex-wrap gap-3">
   <div>
     <h4 class="mb-0 fw-bold" style="color:var(--text-primary);">
       <i class="bi bi-bar-chart-line me-2" style="color:var(--brand-primary);"></i>Analysis
@@ -14,7 +14,7 @@
 </div>
 
 {% if not chart_dist and not chart_trend and not chart_inc_exp and not chart_cats %}
-<div class="text-center py-5 fade-in">
+<div class="text-center py-5 reveal">
   <div style="font-size:4rem;opacity:0.25;margin-bottom:1rem;"><i class="bi bi-bar-chart-line"></i></div>
   <h5 class="fw-bold mb-2">No data yet</h5>
   <p class="text-muted mb-4" style="max-width:400px;margin:0 auto 1.5rem;">
@@ -31,40 +31,53 @@
 </div>
 {% else %}
 
-<!-- Summary row -->
-<div class="row g-3 mb-4 fade-in fade-in-delay-1">
+<!-- Summary row: skeleton -->
+<div class="row g-3 mb-4" id="analysis-skeletons" aria-hidden="true">
+  {% for _ in range(4) %}
   <div class="col-6 col-md-3">
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-circle" style="width:40px;height:40px;margin-bottom:0.75rem;"></div>
+      <div class="skeleton skeleton-line short"></div>
+      <div class="skeleton skeleton-number" style="height:28px;width:55%;"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Summary row -->
+<div class="row g-3 mb-4 fade-in fade-in-delay-1" id="analysis-stats" style="display:none!important;">
+  <div class="col-6 col-md-3 reveal reveal-delay-1">
     <div class="stat-card stat-income h-100">
       <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
       <div class="stat-label">This Month Income</div>
-      <div class="stat-value">₹{{ "%.0f"|format(total_income) }}</div>
+      <div class="stat-value" data-countup="{{ "%.0f"|format(total_income) }}">₹0</div>
       <div class="stat-sub">This month</div>
       <div class="stat-bg-icon"><i class="bi bi-cash-stack"></i></div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-3 reveal reveal-delay-2">
     <div class="stat-card stat-expense h-100">
       <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
       <div class="stat-label">This Month Spent</div>
-      <div class="stat-value">₹{{ "%.0f"|format(total_spent) }}</div>
+      <div class="stat-value" data-countup="{{ "%.0f"|format(total_spent) }}">₹0</div>
       <div class="stat-sub">This month</div>
       <div class="stat-bg-icon"><i class="bi bi-wallet2"></i></div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-3 reveal reveal-delay-3">
     <div class="stat-card stat-balance h-100">
       <div class="stat-icon"><i class="bi bi-house-heart-fill"></i></div>
       <div class="stat-label">Needs (Essential)</div>
-      <div class="stat-value">₹{{ "%.0f"|format(essential) }}</div>
+      <div class="stat-value" data-countup="{{ "%.0f"|format(essential) }}">₹0</div>
       <div class="stat-sub">Essential expenses</div>
       <div class="stat-bg-icon"><i class="bi bi-house-heart"></i></div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-3 reveal reveal-delay-4">
     <div class="stat-card stat-burn h-100">
       <div class="stat-icon"><i class="bi bi-fire"></i></div>
       <div class="stat-label">Burn Rate</div>
-      <div class="stat-value">₹{{ "%.0f"|format(burn_rate) }}</div>
+      <div class="stat-value" data-countup="{{ "%.0f"|format(burn_rate) }}">₹0</div>
       <div class="stat-sub">Per day average</div>
       <div class="stat-bg-icon"><i class="bi bi-graph-up-arrow"></i></div>
     </div>
@@ -72,7 +85,7 @@
 </div>
 
 <!-- Row 1: Expense Distribution + Category Breakdown -->
-<div class="row g-3 mb-4 fade-in fade-in-delay-1">
+<div class="row g-3 mb-4 reveal">
   <div class="col-md-5">
     <div class="card h-100">
       <div class="card-header">
@@ -114,7 +127,7 @@
 </div>
 
 <!-- Row 2: Monthly Spending Trend -->
-<div class="card mb-4 fade-in fade-in-delay-2">
+<div class="card mb-4 reveal reveal-delay-1">
   <div class="card-header">
     <i class="bi bi-graph-up me-2"></i>Monthly Spending Trend
     <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">Last 6 months</span>
@@ -133,7 +146,7 @@
 </div>
 
 <!-- Row 3: Income vs Expense -->
-<div class="card mb-4 fade-in fade-in-delay-3">
+<div class="card mb-4 reveal reveal-delay-2">
   <div class="card-header">
     <i class="bi bi-bar-chart-line me-2"></i>Income vs Expense
     <span class="badge bg-secondary ms-2" style="font-size:0.72rem;">Last 6 months</span>
@@ -153,7 +166,7 @@
 
 <!-- Category table -->
 {% if categories %}
-<div class="card mb-4 fade-in fade-in-delay-3">
+<div class="card mb-4 reveal reveal-delay-3">
   <div class="card-header"><i class="bi bi-table me-2"></i>Category Summary — This Month</div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -203,4 +216,52 @@
 
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function countUp(el, target, duration) {
+    if (reducedMotion) { el.textContent = '₹' + Math.round(target).toLocaleString('en-IN'); return; }
+    var startTime = null;
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = '₹' + Math.round(ease * target).toLocaleString('en-IN');
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var skeletons = document.getElementById('analysis-skeletons');
+    var stats     = document.getElementById('analysis-stats');
+    if (!skeletons || !stats) return;
+
+    var countUpDone = false;
+    function runCountUp() {
+      if (countUpDone) return;
+      countUpDone = true;
+      stats.querySelectorAll('[data-countup]').forEach(function(el) {
+        countUp(el, parseFloat(el.getAttribute('data-countup')) || 0, 900);
+      });
+    }
+
+    setTimeout(function() {
+      skeletons.style.display = 'none';
+      stats.style.removeProperty('display');
+      var io = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) { runCountUp(); io.disconnect(); }
+        });
+      }, { threshold: 0.1 });
+      io.observe(stats);
+      setTimeout(runCountUp, 700);
+    }, 500);
+  });
+})();
+</script>
 {% endblock %}

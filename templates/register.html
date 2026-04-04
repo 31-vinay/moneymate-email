@@ -96,54 +96,58 @@
 </style>
 
 <div class="auth-wrap">
-  <div class="auth-card fade-in">
+  <div class="auth-card reveal">
     <div class="auth-header">
       <div class="auth-icon"><i class="bi bi-person-plus-fill"></i></div>
       <h3>Create Account</h3>
       <p>Join Money Mate and take control of your finances</p>
     </div>
     <div class="auth-body">
-      <form method="POST">
+      <form method="POST" id="registerForm">
         {{ form.hidden_tag() }}
         <div class="mb-3">
           {{ form.username.label(class="form-label") }}
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-person"></i></span>
-            {{ form.username(class="form-control", placeholder="Choose a username") }}
+            {{ form.username(class="form-control", placeholder="Choose a username", id="reg_username") }}
           </div>
           {% if form.username.errors %}
             {% for err in form.username.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
           {% endif %}
+          <div class="field-feedback" id="fb_username"></div>
         </div>
         <div class="mb-3">
           {{ form.email.label(class="form-label") }}
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-            {{ form.email(class="form-control", placeholder="your@email.com") }}
+            {{ form.email(class="form-control", placeholder="your@email.com", id="reg_email") }}
           </div>
           {% if form.email.errors %}
             {% for err in form.email.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
           {% endif %}
+          <div class="field-feedback" id="fb_email"></div>
         </div>
         <div class="mb-3">
           {{ form.password.label(class="form-label") }}
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-lock"></i></span>
-            {{ form.password(class="form-control", placeholder="At least 6 characters") }}
+            {{ form.password(class="form-control", placeholder="At least 6 characters", id="reg_password") }}
           </div>
           {% if form.password.errors %}
             {% for err in form.password.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
           {% endif %}
+          <div class="field-feedback" id="fb_password"></div>
         </div>
         <div class="mb-4">
           {{ form.confirm_password.label(class="form-label") }}
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-            {{ form.confirm_password(class="form-control", placeholder="Repeat your password") }}
+            {{ form.confirm_password(class="form-control", placeholder="Repeat your password", id="reg_confirm") }}
           </div>
           {% if form.confirm_password.errors %}
             {% for err in form.confirm_password.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
           {% endif %}
+          <div class="field-feedback" id="fb_confirm"></div>
         </div>
         <button type="submit" class="btn-auth">
           <i class="bi bi-person-check me-2"></i>Create My Account
@@ -155,5 +159,58 @@
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  function setFeedback(fbEl, inputEl, valid, msg) {
+    fbEl.innerHTML = valid
+      ? '<i class="bi bi-check-circle-fill"></i> ' + msg
+      : '<i class="bi bi-x-circle-fill"></i> ' + msg;
+    fbEl.className = 'field-feedback show ' + (valid ? 'valid' : 'invalid');
+    inputEl.classList.toggle('is-valid-animated', valid);
+    inputEl.classList.toggle('is-invalid-animated', !valid);
+  }
+
+  var usernameEl = document.getElementById('reg_username');
+  var emailEl    = document.getElementById('reg_email');
+  var passwordEl = document.getElementById('reg_password');
+  var confirmEl  = document.getElementById('reg_confirm');
+
+  if (usernameEl) {
+    usernameEl.addEventListener('blur', function() {
+      var v = this.value.trim();
+      if (!v) return;
+      setFeedback(document.getElementById('fb_username'), this, v.length >= 3, v.length >= 3 ? 'Looks good!' : 'Username must be at least 3 characters.');
+    });
+  }
+  if (emailEl) {
+    emailEl.addEventListener('blur', function() {
+      var v = this.value.trim();
+      if (!v) return;
+      var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      setFeedback(document.getElementById('fb_email'), this, ok, ok ? 'Valid email address.' : 'Please enter a valid email.');
+    });
+  }
+  if (passwordEl) {
+    passwordEl.addEventListener('input', function() {
+      var v = this.value;
+      if (!v) return;
+      setFeedback(document.getElementById('fb_password'), this, v.length >= 6, v.length >= 6 ? 'Password is strong enough.' : 'At least 6 characters required.');
+      if (confirmEl && confirmEl.value) {
+        var match = confirmEl.value === v;
+        setFeedback(document.getElementById('fb_confirm'), confirmEl, match, match ? 'Passwords match!' : 'Passwords do not match.');
+      }
+    });
+  }
+  if (confirmEl) {
+    confirmEl.addEventListener('input', function() {
+      var v = this.value;
+      if (!v || !passwordEl) return;
+      var match = v === passwordEl.value;
+      setFeedback(document.getElementById('fb_confirm'), this, match, match ? 'Passwords match!' : 'Passwords do not match.');
+    });
+  }
+})();
+</script>
 
 {% endblock %}
