@@ -148,9 +148,21 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-header d-flex align-items-center gap-2">
+      <div class="card-header d-flex align-items-center gap-2 flex-wrap">
         <i class="bi bi-list-ul"></i> {{ exp_filter_label | default('All Time') }} Expenses
-        <span class="badge ms-auto" style="background:rgba(255,255,255,0.25);">{{ expenses|length }} entries</span>
+        <span class="badge" style="background:rgba(255,255,255,0.25);">{{ expenses|length }} entries</span>
+        {% set uncategorized_count = expenses | selectattr('category', 'equalto', 'Uncategorized') | list | length %}
+        {% if uncategorized_count > 0 %}
+        <form method="post" action="{{ url_for('retro_categorize') }}" class="ms-auto mb-0">
+          <button type="submit" class="btn btn-sm btn-warning rounded-pill"
+                  style="font-size:0.74rem;padding:2px 10px;"
+                  title="Auto-categorize {{ uncategorized_count }} Uncategorized expense(s)">
+            <i class="bi bi-magic me-1"></i>Fix {{ uncategorized_count }} Uncategorized
+          </button>
+        </form>
+        {% else %}
+        <span class="ms-auto"></span>
+        {% endif %}
       </div>
       <div class="card-body p-0">
         {% if expenses %}

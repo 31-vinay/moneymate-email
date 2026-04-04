@@ -605,6 +605,228 @@ for main_cat, data in expense_categories.items():
                     essential_keywords.append(main_cat.lower())
 
 
+def auto_categorize_transaction(description):
+    """
+    Keyword-based categorizer for UPI / bank statement transactions.
+    Returns (sub_category, is_essential, is_subscription).
+    sub_category matches keys inside expense_categories[*]['subcategories'].
+    """
+    d = (description or "").upper()
+
+    # For UPI transactions, extract the merchant segment (between 1st and 2nd dash)
+    merchant = ""
+    if d.startswith("UPI-"):
+        parts = description.split("-")
+        if len(parts) > 1:
+            merchant = parts[1].upper()
+
+    # Tail note (e.g. "DINNER", "ICECREAM", "IMAGICA") — last segment
+    note = d.split("-")[-1].strip() if "-" in d else ""
+
+    combined = d + " " + merchant + " " + note
+
+    def hit(*words):
+        return any(w in combined for w in words)
+
+    # ── Food Delivery ─────────────────────────────────────────────
+    if hit("SWIGGY", "ZOMATO", "BLINKIT", "EATCLUB", "FAASOS",
+           "REBEL FOODS", "BOX8", "FRESHMENU", "LICIOUS", "DUNZO",
+           "ZEPTO", "GROFERS", "MILKBASKET", "DAILY NINJA",
+           "FRESH TO HOME", "COUNTRY DELIGHT", "JIOMART",
+           "DINEOUT"):
+        return ("Food Delivery", False, False)
+
+    # ── Groceries ────────────────────────────────────────────────
+    if hit("BIGBASKET", "RELIANCE FRESH", "RELIANCE SMART", "DMART",
+           "D-MART", "SUPERMART", "MORE SUPERMARKET", "STAR BAZAR",
+           "HYPERCITY", "SPAR", "METRO CASH", "NATURE BASKET",
+           "HERITAGE FRESH", "RATNADEEP", "SMART BAZAR",
+           "SUPERMARKET", "GROCERY", "KIRANA"):
+        return ("Groceries", True, False)
+
+    # ── Dining Out / Fast Food ────────────────────────────────────
+    if hit("RESTAURANT", "CAFE", "CANTEEN", "CATERING", "EATERY",
+           "DHABA", "BIRYANI", "PIZZA", "BURGER", "BAKERY",
+           "KITCHEN", "SWEETS", "MITHAI", "FUSION", "GRILL", "ROLLS",
+           "JUICE BAR", "LASSI", "STALL", "CHAI", "ICECREAM",
+           "ICE CREAM", "HALWAI", "TIFFIN", "MESS",
+           "KFC", "MCDONALDS", "MCDONALD", "SUBWAY", "DOMINOS",
+           "DOMINO", "BURGER KING", "BASKIN ROBBINS", "STARBUCKS",
+           "COSTA COFFEE", "BARISTA", "CHAAYOS", "THEOBROMA",
+           "QUICKVEND", "VENDING",
+           "SWEET FUSION", "COSMOS CATERING", "JAI GANESH",
+           "ROBERTO", "ROBERTOS"):
+        return ("Dining Out", False, False)
+
+    # note-only hints (for generic UPI alerts that lack merchant name)
+    if hit("DINNER", "LUNCH", "BREAKFAST", "SNACK", "COFFEE",
+           "CHAI ", "TEA "):
+        return ("Dining Out", False, False)
+
+    # ── Public Transport ──────────────────────────────────────────
+    if hit("INDIAN RAILWAYS", "IRCTC", "RAILWAYS UTS", "METRO RAIL",
+           "METRO CARD", "DMRC", "NMMC BUS", "MSRTC", "KSRTC", "TSRTC",
+           "UPSRTC", "GSRTC", "OSRTC", "BMTC", "PMPML", "BEST BUS",
+           "APSRTC", "NAMMA METRO"):
+        return ("Public Transport", True, False)
+
+    # ── Fuel ─────────────────────────────────────────────────────
+    if hit("PETROL", "DIESEL", "CNG FILL", "HPCL", "BPCL", "IOC",
+           "INDIANOIL", "BHARAT PETRO", "HP PETRO", "GAS STATION",
+           "FILLING STATION", "NAYARA", "ESSAR OIL"):
+        return ("Fuel", True, False)
+
+    # ── Taxi / Rideshare ─────────────────────────────────────────
+    if hit("OLA ELECTRIC", "OLA ", "UBER", "RAPIDO", "MERU CAB",
+           "YULU", "BOUNCE", "ZOOMCAR", "ZOOM CAR", "DRIVEZY"):
+        return ("Taxi/Rideshare", False, False)
+
+    # ── Parking / Tolls ──────────────────────────────────────────
+    if hit("PARKING", "TOLL PLAZA", "FASTAG", "IHMCL", "NHAI"):
+        return ("Parking Fees", True, False)
+
+    # ── Electricity ───────────────────────────────────────────────
+    if hit("ELECTRICITY", "ELECTRIC BILL", "MSEDCL", "BESCOM",
+           "TNEB", "UPPCL", "CESC", "TPDDL", "BSES", "WBSEDCL",
+           "APEPDCL", "KPTCL", "HESCOM", "GESCOM", "POWER BILL"):
+        return ("Electricity", True, False)
+
+    # ── Water ─────────────────────────────────────────────────────
+    if hit("WATER BILL", "WATER SUPPLY", "BWSSB", "WATER TAX",
+           "WATER BOARD"):
+        return ("Water", True, False)
+
+    # ── Gas ───────────────────────────────────────────────────────
+    if hit("PIPED GAS", "PNG GAS", "IGL", "MGL", "MAHANAGAR GAS",
+           "ADANI GAS", "TORRENT GAS", "GUJARAT GAS"):
+        return ("Gas", True, False)
+
+    # ── Internet ──────────────────────────────────────────────────
+    if hit("BROADBAND", "FIBER", "FIBRE", "ACT FIBERNET",
+           "JIOFIBER", "HATHWAY", "EXCITEL", "TIKONA", "SPECTRANET",
+           "AIRTEL FIBER", "WIFI BILL"):
+        return ("Internet", True, False)
+
+    # ── Mobile Recharge ───────────────────────────────────────────
+    if hit("MOBILE RECHARGE", "PREPAID RECHARGE", "AIRTEL PREPAID",
+           "JIO PREPAID", "VODAFONE PREPAID", "VI PREPAID",
+           "BSNL RECHARGE", "TATA DOCOMO"):
+        return ("Mobile Phone", True, False)
+
+    # ── Pharmacy ─────────────────────────────────────────────────
+    if hit("PHARMACY", "MEDICAL STORE", "CHEMIST", "APOLLO PHARMACY",
+           "MEDPLUS", "NETMEDS", "1MG", "PHARMEASY",
+           "WELLNESS FOREVER", "PRACTO"):
+        return ("Pharmacy", True, False)
+
+    # ── Doctor / Hospital ─────────────────────────────────────────
+    if hit("HOSPITAL", "CLINIC", "NURSING HOME", "DIAGNOSTIC",
+           "PATHOLOGY", "RADIOLOGY", "DENTIST", "DENTAL",
+           "EYE CARE", "OPTICAL", "PHYSIOTHERAPY"):
+        return ("Doctor Visits", True, False)
+
+    # ── Streaming / Subscriptions ─────────────────────────────────
+    if hit("NETFLIX", "HOTSTAR", "DISNEY", "AMAZON PRIME",
+           "PRIME VIDEO", "SONYLIV", "ZEE5", "VOOT",
+           "ALT BALAJI", "JIOCINEMA", "YOUTUBE PREMIUM",
+           "SPOTIFY", "GAANA", "WYNK", "JIOSAAVN",
+           "APPLE MUSIC", "HUNGAMA"):
+        return ("Streaming Subscriptions", False, True)
+
+    # ── Movies / Events ───────────────────────────────────────────
+    if hit("PVR", "INOX", "CINEPOLIS", "CARNIVAL CINEMA",
+           "BOOKMYSHOW", "MOVIE TICKET"):
+        return ("Movies", False, False)
+
+    # ── Gaming ────────────────────────────────────────────────────
+    if hit("STEAM", "XBOX", "PLAYSTATION", "GOOGLE PLAY GAMES",
+           "PUBG", "GAMING"):
+        return ("Gaming", False, False)
+
+    # ── Theme Parks / Recreation ──────────────────────────────────
+    if hit("IMAGICA", "WONDERLA", "ESSEL WORLD", "WATER PARK",
+           "THEME PARK", "AMUSEMENT PARK"):
+        return ("Theme Parks", False, False)
+
+    # ── Travel ────────────────────────────────────────────────────
+    if hit("MAKEMYTRIP", "GOIBIBO", "CLEARTRIP", "YATRA",
+           "EASEMYTRIP", "OYO", "TREEBO", "ZOSTEL",
+           "SPICEJET", "INDIGO", "VISTARA", "AIR INDIA", "GOAIR"):
+        return ("Local Travel", False, False)
+
+    # ── Clothing / Fashion ────────────────────────────────────────
+    if hit("MYNTRA", "AJIO", "NYKAA FASHION", "H&M", "ZARA",
+           "PANTALOONS", "WESTSIDE", "MAX FASHION",
+           "SHOPPERS STOP", "LIFESTYLE STORE", "GARMENTS",
+           "BOUTIQUE", "CLOTHING"):
+        return ("Clothing", True, False)
+
+    # ── Beauty / Salon ────────────────────────────────────────────
+    if hit("NYKAA", "PURPLLE", "SALON", "BEAUTY PARLOUR",
+           "MANICURE", "PEDICURE", "WAXING", "FACIAL", "SPA"):
+        return ("Beauty Products", False, False)
+
+    # ── Education ─────────────────────────────────────────────────
+    if hit("UNACADEMY", "BYJUS", "BYJU", "VEDANTU", "TOPPR",
+           "COURSERA", "UDEMY", "EDUREKA", "SIMPLILEARN", "UPGRAD",
+           "SCHOOL FEE", "COLLEGE FEE", "TUITION", "COACHING"):
+        return ("Online Courses", False, False)
+
+    # ── Rent ──────────────────────────────────────────────────────
+    if hit("HOUSE RENT", "FLAT RENT", "APARTMENT RENT",
+           "LANDLORD", "RENTAL PAYMENT", "PROPERTY TAX"):
+        return ("Rent", True, False)
+
+    # ── Home Maintenance ──────────────────────────────────────────
+    if hit("SOCIETY CHARGES", "MAINTENANCE CHARGES",
+           "HOA", "PLUMBER", "ELECTRICIAN", "CARPENTER",
+           "PAINTER", "HOME REPAIR"):
+        return ("Home Maintenance", True, False)
+
+    # ── Financial / Bank fees / EMI / FD ─────────────────────────
+    if hit("CREDIT CARD PAYMENT", "LOAN EMI", " EMI ",
+           "LIC PREMIUM", "SBI LIFE", "HDFC LIFE",
+           "MAX LIFE", "BAJAJ ALLIANZ", "ICICI PRUDENTIAL",
+           "MUTUAL FUND", " SIP ", "ZERODHA", "GROWW",
+           "BANK FEE", "BANK CHARGES", "EURONET",
+           "FD THROUGH NET", "FIXED DEPOSIT", "RECURRING DEPOSIT"):
+        return ("Bank Fees", True, False)
+
+    # ── Hair / Grooming ───────────────────────────────────────────
+    if hit("HAIR CUTTING", "BARBER", "HAIR SALON", "STYLO HAIR",
+           "HAIR CUT", "GROOMING"):
+        return ("Haircuts", False, False)
+
+    # ── Grocery / Food stores (additional merchants) ──────────────
+    if hit("PURPLEYAM", "SUNSHINE FINE FOOD", "FINE FOOD",
+           "FRESH FOOD", "FOOD MART", "FOOD STORE", "FOODMART"):
+        return ("Food Delivery", False, False)
+
+    # ── UIDAI / Government ────────────────────────────────────────
+    if hit("UIDAI", "RESIDENT.UIDAI", "GOVT.", "GOVERNMENT",
+           "MUNICIPAL", "NAGAR PALIKA", "NAGAR NIGAM"):
+        return ("Bank Fees", True, False)
+
+    # ── Personal transfers (common UPI peer-to-peer patterns) ─────
+    # Names following "UPI-MR ", "UPI-MISS ", "UPI-MRS " are person-to-person
+    if hit("UPI-MR ", "UPI-MS ", "UPI-MISS ", "UPI-MRS ", "UPI-DR "):
+        return ("Other (User Input)", False, False)
+
+    # Any remaining UPI transaction that didn't match a known merchant
+    # is most likely a P2P personal transfer — mark for manual review
+    if d.startswith("UPI-") and merchant and not any(
+        biz in merchant for biz in (
+            "SHOP", "STORE", "MART", "ENTERPRISES", "ENTERPRISE",
+            "SERVICES", "SERVICE", "CATERING", "AGENCY", "LIMITED",
+            "LTD", "PVT", "FOODS", "KITCHEN", "CENTRE", "CENTER",
+        )
+    ):
+        return ("Other (User Input)", False, False)
+
+    # Default — leave for manual review
+    return ("Uncategorized", False, False)
+
+
 def classify_essential(main_category, sub_category, custom_category=None):
     if sub_category is None:
         return False
@@ -2566,14 +2788,15 @@ def email_import_do():
                 )
                 db.session.add(inc)
             else:
+                cat, essential, sub = auto_categorize_transaction(desc)
                 exp = Expense(
                     user_id=current_user.id,
-                    category="Uncategorized",
+                    category=cat,
                     amount=amount,
                     date=txn_date,
                     description=desc,
-                    is_essential=False,
-                    is_subscription=False,
+                    is_essential=essential,
+                    is_subscription=sub,
                 )
                 db.session.add(exp)
             imported_count += 1
@@ -2704,7 +2927,6 @@ def bank_statement_import():
             else:
                 exists = Expense.query.filter_by(
                     user_id=current_user.id,
-                    category="Uncategorized",
                     amount=amount,
                     date=txn_date,
                     description=desc,
@@ -2712,20 +2934,48 @@ def bank_statement_import():
                 if exists:
                     skipped_count += 1
                     continue
+                cat, essential, sub = auto_categorize_transaction(desc)
                 db.session.add(Expense(
                     user_id=current_user.id,
-                    category="Uncategorized",
+                    category=cat,
                     amount=amount,
                     date=txn_date,
                     description=desc,
-                    is_essential=False,
-                    is_subscription=False,
+                    is_essential=essential,
+                    is_subscription=sub,
                 ))
             imported_count += 1
         except Exception:
             continue
     db.session.commit()
     return jsonify({"success": True, "imported": imported_count, "skipped": skipped_count})
+
+
+@app.route("/retro_categorize", methods=["POST"])
+@login_required
+def retro_categorize():
+    """Re-run auto-categorization on all 'Uncategorized' expenses for this user."""
+    expenses = Expense.query.filter_by(
+        user_id=current_user.id, category="Uncategorized"
+    ).all()
+    updated = 0
+    for exp in expenses:
+        cat, essential, sub = auto_categorize_transaction(exp.description or "")
+        if cat != "Uncategorized":
+            exp.category = cat
+            exp.is_essential = essential
+            exp.is_subscription = sub
+            updated += 1
+    db.session.commit()
+    remaining = Expense.query.filter_by(
+        user_id=current_user.id, category="Uncategorized"
+    ).count()
+    flash(
+        f"Auto-categorized {updated} expense{'s' if updated != 1 else ''}. "
+        f"{remaining} still need{'s' if remaining == 1 else ''} manual review.",
+        "success" if remaining == 0 else "warning",
+    )
+    return redirect(url_for("add_expense"))
 
 
 if __name__ == "__main__":
