@@ -1,4 +1,16 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, send_from_directory, send_file, make_response
+from flask import (
+    Flask,
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    request,
+    jsonify,
+    session,
+    send_from_directory,
+    send_file,
+    make_response,
+)
 from flask_login import (
     LoginManager,
     login_user,
@@ -20,7 +32,6 @@ import calendar
 from sqlalchemy import func
 from collections import defaultdict
 from werkzeug.middleware.proxy_fix import ProxyFix
-import json
 import os
 import io
 import base64
@@ -37,9 +48,9 @@ import xlrd
 import msoffcrypto
 import ssl
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
@@ -49,7 +60,9 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 
 admin = Admin(app, name="Finance Manager")
-app.config["SECRET_KEY"] = os.environ.get("SESSION_SECRET", "your-secret-key-change-in-production")
+app.config["SECRET_KEY"] = os.environ.get(
+    "SESSION_SECRET", "your-secret-key-change-in-production"
+)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///finance.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000
@@ -57,6 +70,7 @@ app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000
 db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
 
 # Protect admin views with login
 class AdminModelView(ModelView):
@@ -83,7 +97,10 @@ def create_admin():
     if not admin_user:
         admin_password = os.environ.get("ADMIN_PASSWORD")
         if not admin_password:
-            return "ADMIN_PASSWORD environment variable is not set. Admin user not created.", 500
+            return (
+                "ADMIN_PASSWORD environment variable is not set. Admin user not created.",
+                500,
+            )
         admin_user = User(
             username="admin", email="admin@example.com", password=admin_password
         )
@@ -127,7 +144,9 @@ with app.app_context():
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text("UPDATE goal SET priority='1' WHERE priority='high'"))
-            conn.execute(db.text("UPDATE goal SET priority='2' WHERE priority='medium'"))
+            conn.execute(
+                db.text("UPDATE goal SET priority='2' WHERE priority='medium'")
+            )
             conn.execute(db.text("UPDATE goal SET priority='3' WHERE priority='low'"))
             conn.commit()
     except Exception:
@@ -138,48 +157,189 @@ with app.app_context():
 # ─────────────────────────────────────────────────────────────
 
 IMAP_PRESETS = {
-    "gmail":   {"host": "imap.gmail.com",           "port": 993},
-    "outlook": {"host": "imap-mail.outlook.com",    "port": 993},
-    "yahoo":   {"host": "imap.mail.yahoo.com",      "port": 993},
-    "hotmail": {"host": "imap-mail.outlook.com",    "port": 993},
-    "icloud":  {"host": "imap.mail.me.com",         "port": 993},
+    "gmail": {"host": "imap.gmail.com", "port": 993},
+    "outlook": {"host": "imap-mail.outlook.com", "port": 993},
+    "yahoo": {"host": "imap.mail.yahoo.com", "port": 993},
+    "hotmail": {"host": "imap-mail.outlook.com", "port": 993},
+    "icloud": {"host": "imap.mail.me.com", "port": 993},
 }
 
 FINANCIAL_SUBJECT_KEYWORDS = [
-    "transaction", "payment", "purchase", "receipt", "order", "invoice",
-    "debit", "credit", "charged", "statement", "bill", "transfer",
-    "alert", "notification", "confirmation", "refund", "deposit",
-    "subscription", "auto-pay", "autopay", "due", "amount",
+    "transaction",
+    "payment",
+    "purchase",
+    "receipt",
+    "order",
+    "invoice",
+    "debit",
+    "credit",
+    "charged",
+    "statement",
+    "bill",
+    "transfer",
+    "alert",
+    "notification",
+    "confirmation",
+    "refund",
+    "deposit",
+    "subscription",
+    "auto-pay",
+    "autopay",
+    "due",
+    "amount",
 ]
 
 FINANCIAL_SENDER_KEYWORDS = [
-    "bank", "paypal", "paytm", "stripe", "amazon", "netflix", "spotify",
-    "apple", "google", "microsoft", "hulu", "prime", "uber", "lyft",
-    "razorpay", "hdfc", "sbi", "icici", "axis", "netsuite", "venmo",
-    "cashapp", "zelle", "chase", "citibank", "wells", "fargo",
+    "bank",
+    "paypal",
+    "paytm",
+    "stripe",
+    "amazon",
+    "netflix",
+    "spotify",
+    "apple",
+    "google",
+    "microsoft",
+    "hulu",
+    "prime",
+    "uber",
+    "lyft",
+    "razorpay",
+    "hdfc",
+    "sbi",
+    "icici",
+    "axis",
+    "netsuite",
+    "venmo",
+    "cashapp",
+    "zelle",
+    "chase",
+    "citibank",
+    "wells",
+    "fargo",
 ]
 
 # keyword → (main_category, sub_category)
 CATEGORY_KEYWORD_MAP = [
-    (["grocery", "supermarket", "safeway", "kroger", "walmart", "costco", "whole foods", "amazon fresh", "trader joe"], ("Food & Groceries", "Groceries")),
-    (["restaurant", "dining", "bistro", "cafe", "diner", "eatery", "sushi", "pizza", "burger"], ("Food & Groceries", "Dining Out")),
+    (
+        [
+            "grocery",
+            "supermarket",
+            "safeway",
+            "kroger",
+            "walmart",
+            "costco",
+            "whole foods",
+            "amazon fresh",
+            "trader joe",
+        ],
+        ("Food & Groceries", "Groceries"),
+    ),
+    (
+        [
+            "restaurant",
+            "dining",
+            "bistro",
+            "cafe",
+            "diner",
+            "eatery",
+            "sushi",
+            "pizza",
+            "burger",
+        ],
+        ("Food & Groceries", "Dining Out"),
+    ),
     (["coffee", "starbucks", "dunkin", "costa"], ("Food & Groceries", "Coffee Shops")),
-    (["food delivery", "doordash", "grubhub", "ubereats", "zomato", "swiggy"], ("Food & Groceries", "Food Delivery")),
-    (["fast food", "mcdonald", "kfc", "subway", "domino", "taco bell", "wendy", "burger king"], ("Food & Groceries", "Fast Food")),
-    (["uber", "lyft", "taxi", "rideshare", "ola", "grab"], ("Transportation", "Taxi/Rideshare")),
-    (["fuel", "gas station", "petrol", "shell", "bp ", "chevron", "exxon"], ("Transportation", "Fuel")),
-    (["metro", "bus", "transit", "train", "subway pass", "rail"], ("Transportation", "Public Transport")),
-    (["netflix", "hulu", "disney+", "hbo", "prime video", "apple tv", "peacock", "paramount"], ("Entertainment", "Streaming Services")),
-    (["spotify", "apple music", "tidal", "deezer", "pandora", "youtube music"], ("Entertainment", "Music Streaming")),
-    (["gym", "fitness", "planet fitness", "equinox", "crunch"], ("Personal & Lifestyle", "Gym Membership")),
+    (
+        ["food delivery", "doordash", "grubhub", "ubereats", "zomato", "swiggy"],
+        ("Food & Groceries", "Food Delivery"),
+    ),
+    (
+        [
+            "fast food",
+            "mcdonald",
+            "kfc",
+            "subway",
+            "domino",
+            "taco bell",
+            "wendy",
+            "burger king",
+        ],
+        ("Food & Groceries", "Fast Food"),
+    ),
+    (
+        ["uber", "lyft", "taxi", "rideshare", "ola", "grab"],
+        ("Transportation", "Taxi/Rideshare"),
+    ),
+    (
+        ["fuel", "gas station", "petrol", "shell", "bp ", "chevron", "exxon"],
+        ("Transportation", "Fuel"),
+    ),
+    (
+        ["metro", "bus", "transit", "train", "subway pass", "rail"],
+        ("Transportation", "Public Transport"),
+    ),
+    (
+        [
+            "netflix",
+            "hulu",
+            "disney+",
+            "hbo",
+            "prime video",
+            "apple tv",
+            "peacock",
+            "paramount",
+        ],
+        ("Entertainment", "Streaming Services"),
+    ),
+    (
+        ["spotify", "apple music", "tidal", "deezer", "pandora", "youtube music"],
+        ("Entertainment", "Music Streaming"),
+    ),
+    (
+        ["gym", "fitness", "planet fitness", "equinox", "crunch"],
+        ("Personal & Lifestyle", "Gym Membership"),
+    ),
     (["electricity", "electric", "power bill"], ("Utilities", "Electricity")),
     (["water bill"], ("Utilities", "Water")),
-    (["internet", "broadband", "comcast", "xfinity", "att", "verizon", "spectrum"], ("Utilities", "Internet")),
-    (["mobile", "phone bill", "t-mobile", "sprint", "cricket"], ("Utilities", "Mobile Phone")),
-    (["amazon", "ebay", "etsy", "shopify", "online shopping", "shop", "purchase from"], ("Shopping", "Online Shopping")),
-    (["doctor", "clinic", "hospital", "medical", "health", "dental", "pharmacy", "prescription"], ("Healthcare", "Doctor Visits")),
+    (
+        ["internet", "broadband", "comcast", "xfinity", "att", "verizon", "spectrum"],
+        ("Utilities", "Internet"),
+    ),
+    (
+        ["mobile", "phone bill", "t-mobile", "sprint", "cricket"],
+        ("Utilities", "Mobile Phone"),
+    ),
+    (
+        [
+            "amazon",
+            "ebay",
+            "etsy",
+            "shopify",
+            "online shopping",
+            "shop",
+            "purchase from",
+        ],
+        ("Shopping", "Online Shopping"),
+    ),
+    (
+        [
+            "doctor",
+            "clinic",
+            "hospital",
+            "medical",
+            "health",
+            "dental",
+            "pharmacy",
+            "prescription",
+        ],
+        ("Healthcare", "Doctor Visits"),
+    ),
     (["insurance", "policy", "premium"], ("Insurance", "Health Insurance")),
-    (["school", "tuition", "university", "college", "course", "udemy", "coursera"], ("Education", "School Tuition")),
+    (
+        ["school", "tuition", "university", "college", "course", "udemy", "coursera"],
+        ("Education", "School Tuition"),
+    ),
     (["rent", "lease", "landlord"], ("Housing", "Rent")),
     (["salary", "payroll", "wages", "paycheck"], ("Income", "Salary")),
     (["refund", "cashback", "reward"], ("Income", "Refund")),
@@ -226,13 +386,13 @@ def _extract_text(msg):
 
 def _parse_amount(text):
     patterns = [
-        r'\$\s*([\d,]+\.?\d*)',
-        r'USD\s+([\d,]+\.?\d*)',
-        r'Rs\.?\s*([\d,]+\.?\d*)',
-        r'INR\s+([\d,]+\.?\d*)',
-        r'(?:amount|total|charged|debit|credit)[:\s]+(?:of\s+)?\$?\s*([\d,]+\.?\d*)',
-        r'payment of\s+\$?\s*([\d,]+\.?\d*)',
-        r'\b([\d,]{1,10}\.\d{2})\b',
+        r"\$\s*([\d,]+\.?\d*)",
+        r"USD\s+([\d,]+\.?\d*)",
+        r"Rs\.?\s*([\d,]+\.?\d*)",
+        r"INR\s+([\d,]+\.?\d*)",
+        r"(?:amount|total|charged|debit|credit)[:\s]+(?:of\s+)?\$?\s*([\d,]+\.?\d*)",
+        r"payment of\s+\$?\s*([\d,]+\.?\d*)",
+        r"\b([\d,]{1,10}\.\d{2})\b",
     ]
     for pat in patterns:
         m = re.search(pat, text, re.IGNORECASE)
@@ -256,8 +416,18 @@ def _guess_category(subject, body):
 
 def _is_income(subject, body):
     combined = (subject + " " + body).lower()
-    income_signals = ["received", "credited to your account", "deposit", "refund", "cashback",
-                      "salary", "payroll", "transfer received", "payment received", "reward"]
+    income_signals = [
+        "received",
+        "credited to your account",
+        "deposit",
+        "refund",
+        "cashback",
+        "salary",
+        "payroll",
+        "transfer received",
+        "payment received",
+        "reward",
+    ]
     return any(s in combined for s in income_signals)
 
 
@@ -277,7 +447,9 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
     mail.login(email_addr, password)
     mail.select("INBOX")
 
-    since_date = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)).strftime("%d-%b-%Y")
+    since_date = (
+        datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+    ).strftime("%d-%b-%Y")
     _, message_ids = mail.search(None, f"SINCE {since_date}")
     msg_ids = message_ids[0].split()
     # Process most recent first, cap at 300
@@ -292,10 +464,10 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
             raw = msg_data[0][1]
             msg = email_lib.message_from_bytes(raw)
 
-            subject  = _decode_header_str(msg.get("Subject", ""))
+            subject = _decode_header_str(msg.get("Subject", ""))
             from_addr = msg.get("From", "")
-            date_str  = msg.get("Date", "")
-            msg_id    = msg.get("Message-ID", mid.decode()).strip("<> ")
+            date_str = msg.get("Date", "")
+            msg_id = msg.get("Message-ID", mid.decode()).strip("<> ")
 
             if msg_id in seen_ids:
                 continue
@@ -317,19 +489,23 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
             try:
                 txn_date = parsedate_to_datetime(date_str).strftime("%Y-%m-%d")
             except Exception:
-                txn_date = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
+                txn_date = (
+                    datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
+                )
 
-            transactions.append({
-                "msg_id":      msg_id,
-                "subject":     subject[:120],
-                "from":        from_addr[:100],
-                "date":        txn_date,
-                "amount":      amount,
-                "type":        "income" if is_income else "expense",
-                "main_cat":    main_cat,
-                "sub_cat":     sub_cat,
-                "description": subject[:200],
-            })
+            transactions.append(
+                {
+                    "msg_id": msg_id,
+                    "subject": subject[:120],
+                    "from": from_addr[:100],
+                    "date": txn_date,
+                    "amount": amount,
+                    "type": "income" if is_income else "expense",
+                    "main_cat": main_cat,
+                    "sub_cat": sub_cat,
+                    "description": subject[:200],
+                }
+            )
         except Exception:
             continue
 
@@ -629,56 +805,159 @@ def auto_categorize_transaction(description):
         return any(w in combined for w in words)
 
     # ── Food Delivery ─────────────────────────────────────────────
-    if hit("SWIGGY", "ZOMATO", "BLINKIT", "EATCLUB", "FAASOS",
-           "REBEL FOODS", "BOX8", "FRESHMENU", "LICIOUS", "DUNZO",
-           "ZEPTO", "GROFERS", "MILKBASKET", "DAILY NINJA",
-           "FRESH TO HOME", "COUNTRY DELIGHT", "JIOMART",
-           "DINEOUT"):
+    if hit(
+        "SWIGGY",
+        "ZOMATO",
+        "BLINKIT",
+        "EATCLUB",
+        "FAASOS",
+        "REBEL FOODS",
+        "BOX8",
+        "FRESHMENU",
+        "LICIOUS",
+        "DUNZO",
+        "ZEPTO",
+        "GROFERS",
+        "MILKBASKET",
+        "DAILY NINJA",
+        "FRESH TO HOME",
+        "COUNTRY DELIGHT",
+        "JIOMART",
+        "DINEOUT",
+    ):
         return ("Food Delivery", False, False)
 
     # ── Groceries ────────────────────────────────────────────────
-    if hit("BIGBASKET", "RELIANCE FRESH", "RELIANCE SMART", "DMART",
-           "D-MART", "SUPERMART", "MORE SUPERMARKET", "STAR BAZAR",
-           "HYPERCITY", "SPAR", "METRO CASH", "NATURE BASKET",
-           "HERITAGE FRESH", "RATNADEEP", "SMART BAZAR",
-           "SUPERMARKET", "GROCERY", "KIRANA"):
+    if hit(
+        "BIGBASKET",
+        "RELIANCE FRESH",
+        "RELIANCE SMART",
+        "DMART",
+        "D-MART",
+        "SUPERMART",
+        "MORE SUPERMARKET",
+        "STAR BAZAR",
+        "HYPERCITY",
+        "SPAR",
+        "METRO CASH",
+        "NATURE BASKET",
+        "HERITAGE FRESH",
+        "RATNADEEP",
+        "SMART BAZAR",
+        "SUPERMARKET",
+        "GROCERY",
+        "KIRANA",
+    ):
         return ("Groceries", True, False)
 
     # ── Dining Out / Fast Food ────────────────────────────────────
-    if hit("RESTAURANT", "CAFE", "CANTEEN", "CATERING", "EATERY",
-           "DHABA", "BIRYANI", "PIZZA", "BURGER", "BAKERY",
-           "KITCHEN", "SWEETS", "MITHAI", "FUSION", "GRILL", "ROLLS",
-           "JUICE BAR", "LASSI", "STALL", "CHAI", "ICECREAM",
-           "ICE CREAM", "HALWAI", "TIFFIN", "MESS",
-           "KFC", "MCDONALDS", "MCDONALD", "SUBWAY", "DOMINOS",
-           "DOMINO", "BURGER KING", "BASKIN ROBBINS", "STARBUCKS",
-           "COSTA COFFEE", "BARISTA", "CHAAYOS", "THEOBROMA",
-           "QUICKVEND", "VENDING",
-           "SWEET FUSION", "COSMOS CATERING", "JAI GANESH",
-           "ROBERTO", "ROBERTOS"):
+    if hit(
+        "RESTAURANT",
+        "CAFE",
+        "CANTEEN",
+        "CATERING",
+        "EATERY",
+        "DHABA",
+        "BIRYANI",
+        "PIZZA",
+        "BURGER",
+        "BAKERY",
+        "KITCHEN",
+        "SWEETS",
+        "MITHAI",
+        "FUSION",
+        "GRILL",
+        "ROLLS",
+        "JUICE BAR",
+        "LASSI",
+        "STALL",
+        "CHAI",
+        "ICECREAM",
+        "ICE CREAM",
+        "HALWAI",
+        "TIFFIN",
+        "MESS",
+        "KFC",
+        "MCDONALDS",
+        "MCDONALD",
+        "SUBWAY",
+        "DOMINOS",
+        "DOMINO",
+        "BURGER KING",
+        "BASKIN ROBBINS",
+        "STARBUCKS",
+        "COSTA COFFEE",
+        "BARISTA",
+        "CHAAYOS",
+        "THEOBROMA",
+        "QUICKVEND",
+        "VENDING",
+        "SWEET FUSION",
+        "COSMOS CATERING",
+        "JAI GANESH",
+        "ROBERTO",
+        "ROBERTOS",
+    ):
         return ("Dining Out", False, False)
 
     # note-only hints (for generic UPI alerts that lack merchant name)
-    if hit("DINNER", "LUNCH", "BREAKFAST", "SNACK", "COFFEE",
-           "CHAI ", "TEA "):
+    if hit("DINNER", "LUNCH", "BREAKFAST", "SNACK", "COFFEE", "CHAI ", "TEA "):
         return ("Dining Out", False, False)
 
     # ── Public Transport ──────────────────────────────────────────
-    if hit("INDIAN RAILWAYS", "IRCTC", "RAILWAYS UTS", "METRO RAIL",
-           "METRO CARD", "DMRC", "NMMC BUS", "MSRTC", "KSRTC", "TSRTC",
-           "UPSRTC", "GSRTC", "OSRTC", "BMTC", "PMPML", "BEST BUS",
-           "APSRTC", "NAMMA METRO"):
+    if hit(
+        "INDIAN RAILWAYS",
+        "IRCTC",
+        "RAILWAYS UTS",
+        "METRO RAIL",
+        "METRO CARD",
+        "DMRC",
+        "NMMC BUS",
+        "MSRTC",
+        "KSRTC",
+        "TSRTC",
+        "UPSRTC",
+        "GSRTC",
+        "OSRTC",
+        "BMTC",
+        "PMPML",
+        "BEST BUS",
+        "APSRTC",
+        "NAMMA METRO",
+    ):
         return ("Public Transport", True, False)
 
     # ── Fuel ─────────────────────────────────────────────────────
-    if hit("PETROL", "DIESEL", "CNG FILL", "HPCL", "BPCL", "IOC",
-           "INDIANOIL", "BHARAT PETRO", "HP PETRO", "GAS STATION",
-           "FILLING STATION", "NAYARA", "ESSAR OIL"):
+    if hit(
+        "PETROL",
+        "DIESEL",
+        "CNG FILL",
+        "HPCL",
+        "BPCL",
+        "IOC",
+        "INDIANOIL",
+        "BHARAT PETRO",
+        "HP PETRO",
+        "GAS STATION",
+        "FILLING STATION",
+        "NAYARA",
+        "ESSAR OIL",
+    ):
         return ("Fuel", True, False)
 
     # ── Taxi / Rideshare ─────────────────────────────────────────
-    if hit("OLA ELECTRIC", "OLA ", "UBER", "RAPIDO", "MERU CAB",
-           "YULU", "BOUNCE", "ZOOMCAR", "ZOOM CAR", "DRIVEZY"):
+    if hit(
+        "OLA ELECTRIC",
+        "OLA ",
+        "UBER",
+        "RAPIDO",
+        "MERU CAB",
+        "YULU",
+        "BOUNCE",
+        "ZOOMCAR",
+        "ZOOM CAR",
+        "DRIVEZY",
+    ):
         return ("Taxi/Rideshare", False, False)
 
     # ── Parking / Tolls ──────────────────────────────────────────
@@ -686,125 +965,288 @@ def auto_categorize_transaction(description):
         return ("Parking Fees", True, False)
 
     # ── Electricity ───────────────────────────────────────────────
-    if hit("ELECTRICITY", "ELECTRIC BILL", "MSEDCL", "BESCOM",
-           "TNEB", "UPPCL", "CESC", "TPDDL", "BSES", "WBSEDCL",
-           "APEPDCL", "KPTCL", "HESCOM", "GESCOM", "POWER BILL"):
+    if hit(
+        "ELECTRICITY",
+        "ELECTRIC BILL",
+        "MSEDCL",
+        "BESCOM",
+        "TNEB",
+        "UPPCL",
+        "CESC",
+        "TPDDL",
+        "BSES",
+        "WBSEDCL",
+        "APEPDCL",
+        "KPTCL",
+        "HESCOM",
+        "GESCOM",
+        "POWER BILL",
+    ):
         return ("Electricity", True, False)
 
     # ── Water ─────────────────────────────────────────────────────
-    if hit("WATER BILL", "WATER SUPPLY", "BWSSB", "WATER TAX",
-           "WATER BOARD"):
+    if hit("WATER BILL", "WATER SUPPLY", "BWSSB", "WATER TAX", "WATER BOARD"):
         return ("Water", True, False)
 
     # ── Gas ───────────────────────────────────────────────────────
-    if hit("PIPED GAS", "PNG GAS", "IGL", "MGL", "MAHANAGAR GAS",
-           "ADANI GAS", "TORRENT GAS", "GUJARAT GAS"):
+    if hit(
+        "PIPED GAS",
+        "PNG GAS",
+        "IGL",
+        "MGL",
+        "MAHANAGAR GAS",
+        "ADANI GAS",
+        "TORRENT GAS",
+        "GUJARAT GAS",
+    ):
         return ("Gas", True, False)
 
     # ── Internet ──────────────────────────────────────────────────
-    if hit("BROADBAND", "FIBER", "FIBRE", "ACT FIBERNET",
-           "JIOFIBER", "HATHWAY", "EXCITEL", "TIKONA", "SPECTRANET",
-           "AIRTEL FIBER", "WIFI BILL"):
+    if hit(
+        "BROADBAND",
+        "FIBER",
+        "FIBRE",
+        "ACT FIBERNET",
+        "JIOFIBER",
+        "HATHWAY",
+        "EXCITEL",
+        "TIKONA",
+        "SPECTRANET",
+        "AIRTEL FIBER",
+        "WIFI BILL",
+    ):
         return ("Internet", True, False)
 
     # ── Mobile Recharge ───────────────────────────────────────────
-    if hit("MOBILE RECHARGE", "PREPAID RECHARGE", "AIRTEL PREPAID",
-           "JIO PREPAID", "VODAFONE PREPAID", "VI PREPAID",
-           "BSNL RECHARGE", "TATA DOCOMO"):
+    if hit(
+        "MOBILE RECHARGE",
+        "PREPAID RECHARGE",
+        "AIRTEL PREPAID",
+        "JIO PREPAID",
+        "VODAFONE PREPAID",
+        "VI PREPAID",
+        "BSNL RECHARGE",
+        "TATA DOCOMO",
+    ):
         return ("Mobile Phone", True, False)
 
     # ── Pharmacy ─────────────────────────────────────────────────
-    if hit("PHARMACY", "MEDICAL STORE", "CHEMIST", "APOLLO PHARMACY",
-           "MEDPLUS", "NETMEDS", "1MG", "PHARMEASY",
-           "WELLNESS FOREVER", "PRACTO"):
+    if hit(
+        "PHARMACY",
+        "MEDICAL STORE",
+        "CHEMIST",
+        "APOLLO PHARMACY",
+        "MEDPLUS",
+        "NETMEDS",
+        "1MG",
+        "PHARMEASY",
+        "WELLNESS FOREVER",
+        "PRACTO",
+    ):
         return ("Pharmacy", True, False)
 
     # ── Doctor / Hospital ─────────────────────────────────────────
-    if hit("HOSPITAL", "CLINIC", "NURSING HOME", "DIAGNOSTIC",
-           "PATHOLOGY", "RADIOLOGY", "DENTIST", "DENTAL",
-           "EYE CARE", "OPTICAL", "PHYSIOTHERAPY"):
+    if hit(
+        "HOSPITAL",
+        "CLINIC",
+        "NURSING HOME",
+        "DIAGNOSTIC",
+        "PATHOLOGY",
+        "RADIOLOGY",
+        "DENTIST",
+        "DENTAL",
+        "EYE CARE",
+        "OPTICAL",
+        "PHYSIOTHERAPY",
+    ):
         return ("Doctor Visits", True, False)
 
     # ── Streaming / Subscriptions ─────────────────────────────────
-    if hit("NETFLIX", "HOTSTAR", "DISNEY", "AMAZON PRIME",
-           "PRIME VIDEO", "SONYLIV", "ZEE5", "VOOT",
-           "ALT BALAJI", "JIOCINEMA", "YOUTUBE PREMIUM",
-           "SPOTIFY", "GAANA", "WYNK", "JIOSAAVN",
-           "APPLE MUSIC", "HUNGAMA"):
+    if hit(
+        "NETFLIX",
+        "HOTSTAR",
+        "DISNEY",
+        "AMAZON PRIME",
+        "PRIME VIDEO",
+        "SONYLIV",
+        "ZEE5",
+        "VOOT",
+        "ALT BALAJI",
+        "JIOCINEMA",
+        "YOUTUBE PREMIUM",
+        "SPOTIFY",
+        "GAANA",
+        "WYNK",
+        "JIOSAAVN",
+        "APPLE MUSIC",
+        "HUNGAMA",
+    ):
         return ("Streaming Subscriptions", False, True)
 
     # ── Movies / Events ───────────────────────────────────────────
-    if hit("PVR", "INOX", "CINEPOLIS", "CARNIVAL CINEMA",
-           "BOOKMYSHOW", "MOVIE TICKET"):
+    if hit("PVR", "INOX", "CINEPOLIS", "CARNIVAL CINEMA", "BOOKMYSHOW", "MOVIE TICKET"):
         return ("Movies", False, False)
 
     # ── Gaming ────────────────────────────────────────────────────
-    if hit("STEAM", "XBOX", "PLAYSTATION", "GOOGLE PLAY GAMES",
-           "PUBG", "GAMING"):
+    if hit("STEAM", "XBOX", "PLAYSTATION", "GOOGLE PLAY GAMES", "PUBG", "GAMING"):
         return ("Gaming", False, False)
 
     # ── Theme Parks / Recreation ──────────────────────────────────
-    if hit("IMAGICA", "WONDERLA", "ESSEL WORLD", "WATER PARK",
-           "THEME PARK", "AMUSEMENT PARK"):
+    if hit(
+        "IMAGICA",
+        "WONDERLA",
+        "ESSEL WORLD",
+        "WATER PARK",
+        "THEME PARK",
+        "AMUSEMENT PARK",
+    ):
         return ("Theme Parks", False, False)
 
     # ── Travel ────────────────────────────────────────────────────
-    if hit("MAKEMYTRIP", "GOIBIBO", "CLEARTRIP", "YATRA",
-           "EASEMYTRIP", "OYO", "TREEBO", "ZOSTEL",
-           "SPICEJET", "INDIGO", "VISTARA", "AIR INDIA", "GOAIR"):
+    if hit(
+        "MAKEMYTRIP",
+        "GOIBIBO",
+        "CLEARTRIP",
+        "YATRA",
+        "EASEMYTRIP",
+        "OYO",
+        "TREEBO",
+        "ZOSTEL",
+        "SPICEJET",
+        "INDIGO",
+        "VISTARA",
+        "AIR INDIA",
+        "GOAIR",
+    ):
         return ("Local Travel", False, False)
 
     # ── Clothing / Fashion ────────────────────────────────────────
-    if hit("MYNTRA", "AJIO", "NYKAA FASHION", "H&M", "ZARA",
-           "PANTALOONS", "WESTSIDE", "MAX FASHION",
-           "SHOPPERS STOP", "LIFESTYLE STORE", "GARMENTS",
-           "BOUTIQUE", "CLOTHING"):
+    if hit(
+        "MYNTRA",
+        "AJIO",
+        "NYKAA FASHION",
+        "H&M",
+        "ZARA",
+        "PANTALOONS",
+        "WESTSIDE",
+        "MAX FASHION",
+        "SHOPPERS STOP",
+        "LIFESTYLE STORE",
+        "GARMENTS",
+        "BOUTIQUE",
+        "CLOTHING",
+    ):
         return ("Clothing", True, False)
 
     # ── Beauty / Salon ────────────────────────────────────────────
-    if hit("NYKAA", "PURPLLE", "SALON", "BEAUTY PARLOUR",
-           "MANICURE", "PEDICURE", "WAXING", "FACIAL", "SPA"):
+    if hit(
+        "NYKAA",
+        "PURPLLE",
+        "SALON",
+        "BEAUTY PARLOUR",
+        "MANICURE",
+        "PEDICURE",
+        "WAXING",
+        "FACIAL",
+        "SPA",
+    ):
         return ("Beauty Products", False, False)
 
     # ── Education ─────────────────────────────────────────────────
-    if hit("UNACADEMY", "BYJUS", "BYJU", "VEDANTU", "TOPPR",
-           "COURSERA", "UDEMY", "EDUREKA", "SIMPLILEARN", "UPGRAD",
-           "SCHOOL FEE", "COLLEGE FEE", "TUITION", "COACHING"):
+    if hit(
+        "UNACADEMY",
+        "BYJUS",
+        "BYJU",
+        "VEDANTU",
+        "TOPPR",
+        "COURSERA",
+        "UDEMY",
+        "EDUREKA",
+        "SIMPLILEARN",
+        "UPGRAD",
+        "SCHOOL FEE",
+        "COLLEGE FEE",
+        "TUITION",
+        "COACHING",
+    ):
         return ("Online Courses", False, False)
 
     # ── Rent ──────────────────────────────────────────────────────
-    if hit("HOUSE RENT", "FLAT RENT", "APARTMENT RENT",
-           "LANDLORD", "RENTAL PAYMENT", "PROPERTY TAX"):
+    if hit(
+        "HOUSE RENT",
+        "FLAT RENT",
+        "APARTMENT RENT",
+        "LANDLORD",
+        "RENTAL PAYMENT",
+        "PROPERTY TAX",
+    ):
         return ("Rent", True, False)
 
     # ── Home Maintenance ──────────────────────────────────────────
-    if hit("SOCIETY CHARGES", "MAINTENANCE CHARGES",
-           "HOA", "PLUMBER", "ELECTRICIAN", "CARPENTER",
-           "PAINTER", "HOME REPAIR"):
+    if hit(
+        "SOCIETY CHARGES",
+        "MAINTENANCE CHARGES",
+        "HOA",
+        "PLUMBER",
+        "ELECTRICIAN",
+        "CARPENTER",
+        "PAINTER",
+        "HOME REPAIR",
+    ):
         return ("Home Maintenance", True, False)
 
     # ── Financial / Bank fees / EMI / FD ─────────────────────────
-    if hit("CREDIT CARD PAYMENT", "LOAN EMI", " EMI ",
-           "LIC PREMIUM", "SBI LIFE", "HDFC LIFE",
-           "MAX LIFE", "BAJAJ ALLIANZ", "ICICI PRUDENTIAL",
-           "MUTUAL FUND", " SIP ", "ZERODHA", "GROWW",
-           "BANK FEE", "BANK CHARGES", "EURONET",
-           "FD THROUGH NET", "FIXED DEPOSIT", "RECURRING DEPOSIT"):
+    if hit(
+        "CREDIT CARD PAYMENT",
+        "LOAN EMI",
+        " EMI ",
+        "LIC PREMIUM",
+        "SBI LIFE",
+        "HDFC LIFE",
+        "MAX LIFE",
+        "BAJAJ ALLIANZ",
+        "ICICI PRUDENTIAL",
+        "MUTUAL FUND",
+        " SIP ",
+        "ZERODHA",
+        "GROWW",
+        "BANK FEE",
+        "BANK CHARGES",
+        "EURONET",
+        "FD THROUGH NET",
+        "FIXED DEPOSIT",
+        "RECURRING DEPOSIT",
+    ):
         return ("Bank Fees", True, False)
 
     # ── Hair / Grooming ───────────────────────────────────────────
-    if hit("HAIR CUTTING", "BARBER", "HAIR SALON", "STYLO HAIR",
-           "HAIR CUT", "GROOMING"):
+    if hit(
+        "HAIR CUTTING", "BARBER", "HAIR SALON", "STYLO HAIR", "HAIR CUT", "GROOMING"
+    ):
         return ("Haircuts", False, False)
 
     # ── Grocery / Food stores (additional merchants) ──────────────
-    if hit("PURPLEYAM", "SUNSHINE FINE FOOD", "FINE FOOD",
-           "FRESH FOOD", "FOOD MART", "FOOD STORE", "FOODMART"):
+    if hit(
+        "PURPLEYAM",
+        "SUNSHINE FINE FOOD",
+        "FINE FOOD",
+        "FRESH FOOD",
+        "FOOD MART",
+        "FOOD STORE",
+        "FOODMART",
+    ):
         return ("Food Delivery", False, False)
 
     # ── UIDAI / Government ────────────────────────────────────────
-    if hit("UIDAI", "RESIDENT.UIDAI", "GOVT.", "GOVERNMENT",
-           "MUNICIPAL", "NAGAR PALIKA", "NAGAR NIGAM"):
+    if hit(
+        "UIDAI",
+        "RESIDENT.UIDAI",
+        "GOVT.",
+        "GOVERNMENT",
+        "MUNICIPAL",
+        "NAGAR PALIKA",
+        "NAGAR NIGAM",
+    ):
         return ("Bank Fees", True, False)
 
     # ── Personal transfers (common UPI peer-to-peer patterns) ─────
@@ -814,11 +1256,29 @@ def auto_categorize_transaction(description):
 
     # Any remaining UPI transaction that didn't match a known merchant
     # is most likely a P2P personal transfer — mark for manual review
-    if d.startswith("UPI-") and merchant and not any(
-        biz in merchant for biz in (
-            "SHOP", "STORE", "MART", "ENTERPRISES", "ENTERPRISE",
-            "SERVICES", "SERVICE", "CATERING", "AGENCY", "LIMITED",
-            "LTD", "PVT", "FOODS", "KITCHEN", "CENTRE", "CENTER",
+    if (
+        d.startswith("UPI-")
+        and merchant
+        and not any(
+            biz in merchant
+            for biz in (
+                "SHOP",
+                "STORE",
+                "MART",
+                "ENTERPRISES",
+                "ENTERPRISE",
+                "SERVICES",
+                "SERVICE",
+                "CATERING",
+                "AGENCY",
+                "LIMITED",
+                "LTD",
+                "PVT",
+                "FOODS",
+                "KITCHEN",
+                "CENTRE",
+                "CENTER",
+            )
         )
     ):
         return ("Other (User Input)", False, False)
@@ -858,7 +1318,9 @@ def classify_essential_keywords(text):
 
 # Helper: detect recurring subscriptions
 def detect_subscriptions(user_id, months_back=3):
-    since_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30 * months_back)
+    since_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+        days=30 * months_back
+    )
     expenses = Expense.query.filter(
         Expense.user_id == user_id, Expense.date >= since_date
     ).all()
@@ -996,19 +1458,27 @@ def run_monthly_reset(user):
     new_month_start = datetime(now.year, now.month, 1)
 
     # ── Calculate previous month totals BEFORE touching anything ──
-    prev_income_total = db.session.query(func.sum(Income.amount)).filter(
-        Income.user_id == user.id,
-        Income.date_received >= prev_month_start,
-        Income.date_received < prev_month_end,
-    ).scalar() or 0
+    prev_income_total = (
+        db.session.query(func.sum(Income.amount))
+        .filter(
+            Income.user_id == user.id,
+            Income.date_received >= prev_month_start,
+            Income.date_received < prev_month_end,
+        )
+        .scalar()
+        or 0
+    )
 
-    prev_expense_total = db.session.query(func.sum(Expense.amount)).filter(
-        Expense.user_id == user.id,
-        Expense.date >= prev_month_start,
-        Expense.date < prev_month_end,
-    ).scalar() or 0
-
-    leftover = round(max(0, prev_income_total - prev_expense_total), 2)
+    prev_expense_total = (
+        db.session.query(func.sum(Expense.amount))
+        .filter(
+            Expense.user_id == user.id,
+            Expense.date >= prev_month_start,
+            Expense.date < prev_month_end,
+        )
+        .scalar()
+        or 0
+    )
 
     # ── Roll recurring income forward into the new month ──
     recurring_incomes = Income.query.filter(
@@ -1018,14 +1488,16 @@ def run_monthly_reset(user):
         Income.is_recurring == True,
     ).all()
     for inc in recurring_incomes:
-        db.session.add(Income(
-            user_id=user.id,
-            source=inc.source,
-            amount=inc.amount,
-            date_received=new_month_start,
-            description=inc.description,
-            is_recurring=True,
-        ))
+        db.session.add(
+            Income(
+                user_id=user.id,
+                source=inc.source,
+                amount=inc.amount,
+                date_received=new_month_start,
+                description=inc.description,
+                is_recurring=True,
+            )
+        )
 
     # ── Roll recurring subscription expenses forward into the new month ──
     recurring_expenses = Expense.query.filter(
@@ -1035,17 +1507,19 @@ def run_monthly_reset(user):
         Expense.is_subscription == True,
     ).all()
     for exp in recurring_expenses:
-        db.session.add(Expense(
-            user_id=user.id,
-            category=exp.category,
-            amount=exp.amount,
-            date=new_month_start,
-            description=exp.description,
-            is_essential=exp.is_essential,
-            is_subscription=True,
-            sub_start_date=exp.sub_start_date,
-            sub_end_date=exp.sub_end_date,
-        ))
+        db.session.add(
+            Expense(
+                user_id=user.id,
+                category=exp.category,
+                amount=exp.amount,
+                date=new_month_start,
+                description=exp.description,
+                is_essential=exp.is_essential,
+                is_subscription=True,
+                sub_start_date=exp.sub_start_date,
+                sub_end_date=exp.sub_end_date,
+            )
+        )
 
     # ── Delete ALL previous month entries (old recurring copies no longer needed) ──
     Expense.query.filter(
@@ -1062,27 +1536,32 @@ def run_monthly_reset(user):
 
     # ── Fund goals from the Wants budget (user-configured %) ──
     goals_wants_pct = max(0.0, min(100.0, user.goals_wants_pct or 30.0))
-    goals_alloc_budget = round(prev_income * 0.30 * goals_wants_pct / 100, 2)
+    goals_alloc_budget = round(prev_income_total * 0.30 * goals_wants_pct / 100, 2)
 
     active_goals = sorted(
-        [g for g in Goal.query.filter_by(user_id=user.id).all()
-         if g.saved_amount < g.target_amount],
-        key=lambda g: (int(g.priority) if str(g.priority).isdigit() else 99)
+        [
+            g
+            for g in Goal.query.filter_by(user_id=user.id).all()
+            if g.saved_amount < g.target_amount
+        ],
+        key=lambda g: (int(g.priority) if str(g.priority).isdigit() else 99),
     )
     goals_funded = 0.0
     if active_goals and goals_alloc_budget > 0:
         total_monthly = sum(g.monthly_savings for g in active_goals)
         for g in active_goals:
             share = round(
-                goals_alloc_budget * (g.monthly_savings / total_monthly) if total_monthly > 0
-                else goals_alloc_budget / len(active_goals), 2
+                goals_alloc_budget * (g.monthly_savings / total_monthly)
+                if total_monthly > 0
+                else goals_alloc_budget / len(active_goals),
+                2,
             )
             g.saved_amount = round(min(g.target_amount, g.saved_amount + share), 2)
             goals_funded += share
 
     # ── Carry true net leftover into cumulative savings_balance ──
     # Net leftover = income − expenses − goals funded this month
-    net_leftover = round(max(0.0, prev_income - prev_expense_total - goals_funded), 2)
+    net_leftover = round(max(0.0, prev_income_total - prev_expense_total - goals_funded), 2)
     user.savings_balance = round((user.savings_balance or 0.0) + net_leftover, 2)
 
     db.session.commit()
@@ -1105,23 +1584,27 @@ def check_subscription_expiry(user_id):
         if days_left < 0:
             # Expired
             if not sub.sub_expired_notified:
-                alerts.append({
-                    "type": "expired",
-                    "name": sub.description or sub.category,
-                    "id": sub.id,
-                    "end_date": sub.sub_end_date,
-                })
+                alerts.append(
+                    {
+                        "type": "expired",
+                        "name": sub.description or sub.category,
+                        "id": sub.id,
+                        "end_date": sub.sub_end_date,
+                    }
+                )
                 sub.sub_expired_notified = True
                 db.session.commit()
         elif days_left <= 7:
             # Expiring soon
-            alerts.append({
-                "type": "expiring",
-                "name": sub.description or sub.category,
-                "id": sub.id,
-                "days_left": days_left,
-                "end_date": sub.sub_end_date,
-            })
+            alerts.append(
+                {
+                    "type": "expiring",
+                    "name": sub.description or sub.category,
+                    "id": sub.id,
+                    "days_left": days_left,
+                    "end_date": sub.sub_end_date,
+                }
+            )
 
     return alerts
 
@@ -1141,7 +1624,9 @@ def remove_expired_subscription(id):
 
 @app.route("/manifest.json")
 def pwa_manifest():
-    return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
+    return send_from_directory(
+        "static", "manifest.json", mimetype="application/manifest+json"
+    )
 
 
 @app.route("/sw.js")
@@ -1198,8 +1683,9 @@ def login():
                     return redirect(url_for("dashboard"))
                 else:
                     flash("Incorrect MPIN. Please try again.", "danger")
-                    return render_template("login.html", form=form,
-                                           prefill_email=email, show_mpin=True)
+                    return render_template(
+                        "login.html", form=form, prefill_email=email, show_mpin=True
+                    )
             elif password_input:
                 if user.password == password_input:
                     login_user(user)
@@ -1208,9 +1694,12 @@ def login():
                     return redirect(url_for("dashboard"))
                 else:
                     flash("Incorrect password. Please try again.", "danger")
-                    return render_template("login.html", form=form,
-                                           prefill_email=email,
-                                           show_mpin=bool(user.mpin))
+                    return render_template(
+                        "login.html",
+                        form=form,
+                        prefill_email=email,
+                        show_mpin=bool(user.mpin),
+                    )
         else:
             flash("No account found with that email.", "danger")
     return render_template("login.html", form=form)
@@ -1221,7 +1710,9 @@ def check_mpin_status():
     email = request.args.get("email", "").strip().lower()
     user = User.query.filter(User.email.ilike(email)).first()
     if user:
-        return jsonify({"exists": True, "has_mpin": bool(user.mpin), "username": user.username})
+        return jsonify(
+            {"exists": True, "has_mpin": bool(user.mpin), "username": user.username}
+        )
     return jsonify({"exists": False, "has_mpin": False})
 
 
@@ -1365,7 +1856,10 @@ def update_goals_wants_pct():
         pct = max(0.0, min(100.0, pct))
         current_user.goals_wants_pct = round(pct, 1)
         db.session.commit()
-        flash(f"Goals budget updated: {current_user.goals_wants_pct:.0f}% of your Wants budget will go to goals each month.", "success")
+        flash(
+            f"Goals budget updated: {current_user.goals_wants_pct:.0f}% of your Wants budget will go to goals each month.",
+            "success",
+        )
     except (ValueError, TypeError):
         flash("Invalid percentage value.", "danger")
     return redirect(url_for("settings"))
@@ -1374,8 +1868,16 @@ def update_goals_wants_pct():
 @app.route("/request-account-info")
 @login_required
 def request_account_info():
-    incomes = Income.query.filter_by(user_id=current_user.id).order_by(Income.date_received.desc()).all()
-    expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
+    incomes = (
+        Income.query.filter_by(user_id=current_user.id)
+        .order_by(Income.date_received.desc())
+        .all()
+    )
+    expenses = (
+        Expense.query.filter_by(user_id=current_user.id)
+        .order_by(Expense.date.desc())
+        .all()
+    )
     goals = Goal.query.filter_by(user_id=current_user.id).all()
     return render_template(
         "account_info.html",
@@ -1443,9 +1945,15 @@ def dashboard():
     sub_alerts = check_subscription_expiry(current_user.id)
     for alert in sub_alerts:
         if alert["type"] == "expired":
-            flash(f"⚠️ Your subscription '{alert['name']}' expired on {alert['end_date'].strftime('%d %b %Y')}. Visit Subscriptions to remove it.", "warning")
+            flash(
+                f"⚠️ Your subscription '{alert['name']}' expired on {alert['end_date'].strftime('%d %b %Y')}. Visit Subscriptions to remove it.",
+                "warning",
+            )
         elif alert["type"] == "expiring":
-            flash(f"🔔 Your subscription '{alert['name']}' expires in {alert['days_left']} day(s) on {alert['end_date'].strftime('%d %b %Y')}.", "info")
+            flash(
+                f"🔔 Your subscription '{alert['name']}' expires in {alert['days_left']} day(s) on {alert['end_date'].strftime('%d %b %Y')}.",
+                "info",
+            )
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -1462,7 +1970,7 @@ def dashboard():
         month_end = datetime(view_year + 1, 1, 1)
     else:
         month_end = datetime(view_year, view_month + 1, 1)
-    is_current_month = (view_year == now.year and view_month == now.month)
+    is_current_month = view_year == now.year and view_month == now.month
     # List last 12 months for the picker
     month_options = []
     for i in range(12):
@@ -1471,7 +1979,9 @@ def dashboard():
         while mo <= 0:
             mo += 12
             yo -= 1
-        month_options.append((f"{yo:04d}-{mo:02d}", datetime(yo, mo, 1).strftime("%b %Y")))
+        month_options.append(
+            (f"{yo:04d}-{mo:02d}", datetime(yo, mo, 1).strftime("%b %Y"))
+        )
     selected_month_label = datetime(view_year, view_month, 1).strftime("%B %Y")
 
     # Expenses this month
@@ -1566,7 +2076,6 @@ def dashboard():
         .all()
     )
 
-
     monthly_spending = defaultdict(float)
     for exp in expenses:
         monthly_spending[exp.date.strftime("%b")] += exp.amount
@@ -1581,10 +2090,13 @@ def dashboard():
 
     needs_remaining = budget_needs - essential
     wants_remaining = budget_wants - non_essential
-    savings_allocated = budget_savings
 
-    needs_used_pct = min(100, (essential / budget_needs * 100)) if budget_needs > 0 else 0
-    wants_used_pct = min(100, (non_essential / budget_wants * 100)) if budget_wants > 0 else 0
+    needs_used_pct = (
+        min(100, (essential / budget_needs * 100)) if budget_needs > 0 else 0
+    )
+    wants_used_pct = (
+        min(100, (non_essential / budget_wants * 100)) if budget_wants > 0 else 0
+    )
 
     needs_warning = (needs_remaining > 0) and (needs_remaining <= budget_needs * 0.10)
     wants_warning = (wants_remaining > 0) and (wants_remaining <= budget_wants * 0.10)
@@ -1607,18 +2119,26 @@ def dashboard():
         days_remaining = 0
     projected_month_end_spend = total_spent + (burn_rate * days_remaining)
     predicted_balance = total_income - projected_month_end_spend
-    show_month_forecast_warning = is_current_month and (days_remaining <= 10) and (predicted_balance < 0)
+    show_month_forecast_warning = (
+        is_current_month and (days_remaining <= 10) and (predicted_balance < 0)
+    )
 
     # Personalized saving tips for the warning alert
     shortfall = abs(predicted_balance) if predicted_balance < 0 else 0
-    required_daily_savings = round(shortfall / days_remaining, 2) if days_remaining > 0 else shortfall
+    required_daily_savings = (
+        round(shortfall / days_remaining, 2) if days_remaining > 0 else shortfall
+    )
 
     # Top non-essential spending categories
     non_essential_categories = {}
     for e in expenses:
         if not e.is_essential:
-            non_essential_categories[e.category] = non_essential_categories.get(e.category, 0) + e.amount
-    top_non_essential_cats = sorted(non_essential_categories.items(), key=lambda x: x[1], reverse=True)[:3]
+            non_essential_categories[e.category] = (
+                non_essential_categories.get(e.category, 0) + e.amount
+            )
+    top_non_essential_cats = sorted(
+        non_essential_categories.items(), key=lambda x: x[1], reverse=True
+    )[:3]
 
     # Subscriptions to consider pausing
     top_subs = sorted(subscriptions, key=lambda s: s["avg_amount"], reverse=True)[:3]
@@ -1631,8 +2151,7 @@ def dashboard():
             return 99
 
     active_goals = sorted(
-        [g for g in goals if g.remaining_amount > 0],
-        key=goal_priority_num
+        [g for g in goals if g.remaining_amount > 0], key=goal_priority_num
     )
     goal_suggestions = []
     if total_income > 0 and active_goals and goals_alloc > 0:
@@ -1640,15 +2159,19 @@ def dashboard():
         weights = [1.0 / goal_priority_num(g) for g in active_goals]
         total_weight = sum(weights)
         for g, w in zip(active_goals, weights):
-            alloc_pct = w / total_weight if total_weight > 0 else 1.0 / len(active_goals)
+            alloc_pct = (
+                w / total_weight if total_weight > 0 else 1.0 / len(active_goals)
+            )
             suggested = round(min(goals_alloc * alloc_pct, g.remaining_amount), 2)
-            goal_suggestions.append({
-                "name": g.name,
-                "priority": goal_priority_num(g),
-                "suggested": suggested,
-                "remaining": g.remaining_amount,
-                "id": g.id,
-            })
+            goal_suggestions.append(
+                {
+                    "name": g.name,
+                    "priority": goal_priority_num(g),
+                    "suggested": suggested,
+                    "remaining": g.remaining_amount,
+                    "id": g.id,
+                }
+            )
 
     return render_template(
         "dashboard.html",
@@ -1734,15 +2257,25 @@ def add_income():
 
     income_query = Income.query.filter_by(user_id=current_user.id)
     if inc_filter_days:
-        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=inc_filter_days)
+        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            days=inc_filter_days
+        )
         income_query = income_query.filter(Income.date_received >= since)
-        inc_filter_label = f"Last {inc_filter_days} day{'s' if inc_filter_days != 1 else ''}"
+        inc_filter_label = (
+            f"Last {inc_filter_days} day{'s' if inc_filter_days != 1 else ''}"
+        )
     else:
         inc_filter_label = "All Time"
 
     incomes = income_query.order_by(Income.date_received.desc()).all()
-    return render_template("add_income.html", form=form, edit=False, incomes=incomes,
-                           inc_filter_days=inc_filter_days, inc_filter_label=inc_filter_label)
+    return render_template(
+        "add_income.html",
+        form=form,
+        edit=False,
+        incomes=incomes,
+        inc_filter_days=inc_filter_days,
+        inc_filter_label=inc_filter_label,
+    )
 
 
 @app.route("/edit_income/<int:id>", methods=["GET", "POST"])
@@ -1759,7 +2292,9 @@ def edit_income(id):
         income.description = form.description.data
         income.is_recurring = form.is_recurring.data
         if form.date_received.data:
-            income.date_received = datetime.combine(form.date_received.data, datetime.min.time())
+            income.date_received = datetime.combine(
+                form.date_received.data, datetime.min.time()
+            )
         db.session.commit()
         flash("Income updated.", "success")
         return redirect(url_for("add_income"))
@@ -1775,8 +2310,14 @@ def edit_income(id):
         .order_by(Income.date_received.desc())
         .all()
     )
-    return render_template("add_income.html", form=form, edit=True, incomes=incomes,
-                           inc_filter_days=None, inc_filter_label="All Time")
+    return render_template(
+        "add_income.html",
+        form=form,
+        edit=True,
+        incomes=incomes,
+        inc_filter_days=None,
+        inc_filter_label="All Time",
+    )
 
 
 @app.route("/delete_income/<int:id>")
@@ -1844,9 +2385,13 @@ def add_expense():
             sub_end = None
             if form.is_subscription.data:
                 if form.sub_start_date.data:
-                    sub_start = datetime.combine(form.sub_start_date.data, datetime.min.time())
+                    sub_start = datetime.combine(
+                        form.sub_start_date.data, datetime.min.time()
+                    )
                 if form.sub_end_date.data:
-                    sub_end = datetime.combine(form.sub_end_date.data, datetime.min.time())
+                    sub_end = datetime.combine(
+                        form.sub_end_date.data, datetime.min.time()
+                    )
 
             expense = Expense(
                 user_id=current_user.id,
@@ -1878,9 +2423,13 @@ def add_expense():
 
     expense_query = Expense.query.filter_by(user_id=current_user.id)
     if exp_filter_days:
-        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=exp_filter_days)
+        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            days=exp_filter_days
+        )
         expense_query = expense_query.filter(Expense.date >= since)
-        exp_filter_label = f"Last {exp_filter_days} day{'s' if exp_filter_days != 1 else ''}"
+        exp_filter_label = (
+            f"Last {exp_filter_days} day{'s' if exp_filter_days != 1 else ''}"
+        )
     else:
         exp_filter_label = "All Time"
 
@@ -1932,8 +2481,16 @@ def edit_expense(id):
         if form.date.data:
             expense.date = datetime.combine(form.date.data, datetime.min.time())
         if form.is_subscription.data:
-            expense.sub_start_date = datetime.combine(form.sub_start_date.data, datetime.min.time()) if form.sub_start_date.data else None
-            expense.sub_end_date = datetime.combine(form.sub_end_date.data, datetime.min.time()) if form.sub_end_date.data else None
+            expense.sub_start_date = (
+                datetime.combine(form.sub_start_date.data, datetime.min.time())
+                if form.sub_start_date.data
+                else None
+            )
+            expense.sub_end_date = (
+                datetime.combine(form.sub_end_date.data, datetime.min.time())
+                if form.sub_end_date.data
+                else None
+            )
         else:
             expense.sub_start_date = None
             expense.sub_end_date = None
@@ -2108,7 +2665,9 @@ def goal_detail(id):
     milestones = []
     if goal.monthly_savings > 0:
         for month in range(1, min(13, int(goal.estimated_months) + 1)):
-            milestone_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30 * month)
+            milestone_date = datetime.now(timezone.utc).replace(
+                tzinfo=None
+            ) + timedelta(days=30 * month)
             milestone_amount = goal.saved_amount + (goal.monthly_savings * month)
             milestones.append(
                 {
@@ -2161,8 +2720,9 @@ def what_if(id):
     remaining = goal.remaining_amount
     months = remaining / total_monthly
 
-
-    estimated_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30 * months)
+    estimated_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+        days=30 * months
+    )
 
     return jsonify(
         {
@@ -2175,16 +2735,16 @@ def what_if(id):
 
 def make_chart(fig):
     buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', dpi=110, transparent=True)
+    fig.savefig(buf, format="png", bbox_inches="tight", dpi=110, transparent=True)
     buf.seek(0)
-    img_b64 = base64.b64encode(buf.read()).decode('utf-8')
+    img_b64 = base64.b64encode(buf.read()).decode("utf-8")
     plt.close(fig)
     return img_b64
 
 
 def make_chart_png(fig):
     buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', dpi=110, transparent=True)
+    fig.savefig(buf, format="png", bbox_inches="tight", dpi=110, transparent=True)
     buf.seek(0)
     plt.close(fig)
     return buf
@@ -2211,35 +2771,42 @@ def _get_analysis_data(user_id):
 
     monthly_spending = defaultdict(float)
     for exp in all_expenses:
-        key = exp.date.strftime('%b %Y')
+        key = exp.date.strftime("%b %Y")
         monthly_spending[key] += exp.amount
-    sorted_months = sorted(monthly_spending.keys(), key=lambda m: datetime.strptime(m, '%b %Y'))
+    sorted_months = sorted(
+        monthly_spending.keys(), key=lambda m: datetime.strptime(m, "%b %Y")
+    )
     monthly_spending_ordered = {m: monthly_spending[m] for m in sorted_months}
 
     monthly_income = defaultdict(float)
     monthly_expense_all = defaultdict(float)
     for inc in all_incomes:
-        monthly_income[inc.date_received.strftime('%b %Y')] += inc.amount
+        monthly_income[inc.date_received.strftime("%b %Y")] += inc.amount
     for exp in all_expenses:
-        monthly_expense_all[exp.date.strftime('%b %Y')] += exp.amount
+        monthly_expense_all[exp.date.strftime("%b %Y")] += exp.amount
 
-    return categories, monthly_spending_ordered, dict(monthly_income), dict(monthly_expense_all)
+    return (
+        categories,
+        monthly_spending_ordered,
+        dict(monthly_income),
+        dict(monthly_expense_all),
+    )
 
 
 def _chart_png_response(buf):
-    resp = make_response(send_file(buf, mimetype='image/png'))
-    resp.headers['Cache-Control'] = 'private, max-age=300'
+    resp = make_response(send_file(buf, mimetype="image/png"))
+    resp.headers["Cache-Control"] = "private, max-age=300"
     return resp
 
 
 @app.route("/analysis/chart/dist")
 @login_required
 def analysis_chart_dist():
-    dark_mode = request.cookies.get('darkMode') == 'true'
+    dark_mode = request.cookies.get("darkMode") == "true"
     categories, _, _, _ = _get_analysis_data(current_user.id)
     fig_result = chart_expense_distribution(categories, dark_mode=dark_mode)
     if not fig_result:
-        return ('', 204)
+        return ("", 204)
     buf = io.BytesIO(base64.b64decode(fig_result))
     return _chart_png_response(buf)
 
@@ -2247,11 +2814,11 @@ def analysis_chart_dist():
 @app.route("/analysis/chart/cats")
 @login_required
 def analysis_chart_cats():
-    dark_mode = request.cookies.get('darkMode') == 'true'
+    dark_mode = request.cookies.get("darkMode") == "true"
     categories, _, _, _ = _get_analysis_data(current_user.id)
     fig_result = chart_category_breakdown(categories, dark_mode=dark_mode)
     if not fig_result:
-        return ('', 204)
+        return ("", 204)
     buf = io.BytesIO(base64.b64decode(fig_result))
     return _chart_png_response(buf)
 
@@ -2259,11 +2826,11 @@ def analysis_chart_cats():
 @app.route("/analysis/chart/trend")
 @login_required
 def analysis_chart_trend():
-    dark_mode = request.cookies.get('darkMode') == 'true'
+    dark_mode = request.cookies.get("darkMode") == "true"
     _, monthly_spending_ordered, _, _ = _get_analysis_data(current_user.id)
     fig_result = chart_monthly_trend(monthly_spending_ordered, dark_mode=dark_mode)
     if not fig_result:
-        return ('', 204)
+        return ("", 204)
     buf = io.BytesIO(base64.b64decode(fig_result))
     return _chart_png_response(buf)
 
@@ -2271,11 +2838,13 @@ def analysis_chart_trend():
 @app.route("/analysis/chart/inc_exp")
 @login_required
 def analysis_chart_inc_exp():
-    dark_mode = request.cookies.get('darkMode') == 'true'
+    dark_mode = request.cookies.get("darkMode") == "true"
     _, _, monthly_income, monthly_expense_all = _get_analysis_data(current_user.id)
-    fig_result = chart_income_vs_expense(monthly_income, monthly_expense_all, dark_mode=dark_mode)
+    fig_result = chart_income_vs_expense(
+        monthly_income, monthly_expense_all, dark_mode=dark_mode
+    )
     if not fig_result:
-        return ('', 204)
+        return ("", 204)
     buf = io.BytesIO(base64.b64decode(fig_result))
     return _chart_png_response(buf)
 
@@ -2283,31 +2852,50 @@ def analysis_chart_inc_exp():
 def chart_expense_distribution(categories, dark_mode=False):
     if not categories:
         return None
-    txt_color = '#e0e0e0' if dark_mode else '#2d3436'
-    sub_color = '#b0b0b0' if dark_mode else '#636e72'
-    grid_color = '#444444' if dark_mode else '#dfe6e9'
+    txt_color = "#e0e0e0" if dark_mode else "#2d3436"
     labels = list(categories.keys())
     values = list(categories.values())
-    colors = ['#008080','#00CEC9','#FD79A8','#FDCB6E','#55EFC4',
-              '#FF924D','#0984E3','#7dd3fc','#00B894','#74B9FF']
+    colors = [
+        "#008080",
+        "#00CEC9",
+        "#FD79A8",
+        "#FDCB6E",
+        "#55EFC4",
+        "#FF924D",
+        "#0984E3",
+        "#7dd3fc",
+        "#00B894",
+        "#74B9FF",
+    ]
     fig, ax = plt.subplots(figsize=(5, 4))
     fig.patch.set_alpha(0)
     wedges, texts, autotexts = ax.pie(
-        values, labels=None, autopct='%1.0f%%',
-        colors=colors[:len(values)], startangle=140,
-        wedgeprops=dict(width=0.6, edgecolor='white', linewidth=2),
-        pctdistance=0.78
+        values,
+        labels=None,
+        autopct="%1.0f%%",
+        colors=colors[: len(values)],
+        startangle=140,
+        wedgeprops=dict(width=0.6, edgecolor="white", linewidth=2),
+        pctdistance=0.78,
     )
     for t in autotexts:
         t.set_fontsize(9)
-        t.set_color('white')
-        t.set_fontweight('bold')
-    legend = ax.legend(wedges, [f'{l} (₹{v:,.0f})' for l, v in zip(labels, values)],
-              loc='lower center', bbox_to_anchor=(0.5, -0.22),
-              ncol=2, fontsize=8, frameon=False)
+        t.set_color("white")
+        t.set_fontweight("bold")
+    legend = ax.legend(
+        wedges,
+        [f"{l} (₹{v:,.0f})" for l, v in zip(labels, values)],
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.22),
+        ncol=2,
+        fontsize=8,
+        frameon=False,
+    )
     for text in legend.get_texts():
         text.set_color(txt_color)
-    ax.set_title('Expense Distribution', fontsize=12, fontweight='bold', pad=10, color=txt_color)
+    ax.set_title(
+        "Expense Distribution", fontsize=12, fontweight="bold", pad=10, color=txt_color
+    )
     return make_chart(fig)
 
 
@@ -2315,39 +2903,67 @@ def chart_income_vs_expense(monthly_inc, monthly_exp, dark_mode=False):
     months = sorted(set(list(monthly_inc.keys()) + list(monthly_exp.keys())))
     if not months:
         return None
-    txt_color = '#e0e0e0' if dark_mode else '#2d3436'
-    sub_color = '#b0b0b0' if dark_mode else '#636e72'
-    grid_color = '#444444' if dark_mode else '#dfe6e9'
+    txt_color = "#e0e0e0" if dark_mode else "#2d3436"
+    sub_color = "#b0b0b0" if dark_mode else "#636e72"
+    grid_color = "#444444" if dark_mode else "#dfe6e9"
     inc_vals = [monthly_inc.get(m, 0) for m in months]
     exp_vals = [monthly_exp.get(m, 0) for m in months]
     x = range(len(months))
     fig, ax = plt.subplots(figsize=(7, 3.8))
     fig.patch.set_alpha(0)
     w = 0.35
-    bars1 = ax.bar([i - w/2 for i in x], inc_vals, width=w, color='#00b894', label='Income',
-                   edgecolor='white', linewidth=1.2, zorder=3)
-    bars2 = ax.bar([i + w/2 for i in x], exp_vals, width=w, color='#FF924D', label='Expense',
-                   edgecolor='white', linewidth=1.2, zorder=3)
+    bars1 = ax.bar(
+        [i - w / 2 for i in x],
+        inc_vals,
+        width=w,
+        color="#00b894",
+        label="Income",
+        edgecolor="white",
+        linewidth=1.2,
+        zorder=3,
+    )
+    bars2 = ax.bar(
+        [i + w / 2 for i in x],
+        exp_vals,
+        width=w,
+        color="#FF924D",
+        label="Expense",
+        edgecolor="white",
+        linewidth=1.2,
+        zorder=3,
+    )
     for bar in list(bars1) + list(bars2):
         if bar.get_height() > 0:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 100,
-                    f'₹{bar.get_height():,.0f}', ha='center', va='bottom',
-                    fontsize=7.5, color=sub_color)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 100,
+                f"₹{bar.get_height():,.0f}",
+                ha="center",
+                va="bottom",
+                fontsize=7.5,
+                color=sub_color,
+            )
     ax.set_xticks(list(x))
     ax.set_xticklabels(months, fontsize=9, color=txt_color)
-    ax.tick_params(axis='y', labelsize=8, colors=txt_color)
-    ax.tick_params(axis='x', colors=txt_color)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'₹{v/1000:.0f}k' if v >= 1000 else f'₹{v:.0f}'))
+    ax.tick_params(axis="y", labelsize=8, colors=txt_color)
+    ax.tick_params(axis="x", colors=txt_color)
+    ax.yaxis.set_major_formatter(
+        plt.FuncFormatter(
+            lambda v, _: f"₹{v / 1000:.0f}k" if v >= 1000 else f"₹{v:.0f}"
+        )
+    )
     ax.set_axisbelow(True)
     ax.yaxis.grid(True, color=grid_color, linewidth=0.8)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color(grid_color)
-    ax.spines['bottom'].set_color(grid_color)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color(grid_color)
+    ax.spines["bottom"].set_color(grid_color)
     legend = ax.legend(fontsize=9, frameon=False)
     for text in legend.get_texts():
         text.set_color(txt_color)
-    ax.set_title('Income vs Expense', fontsize=12, fontweight='bold', pad=10, color=txt_color)
+    ax.set_title(
+        "Income vs Expense", fontsize=12, fontweight="bold", pad=10, color=txt_color
+    )
     fig.tight_layout()
     return make_chart(fig)
 
@@ -2355,31 +2971,58 @@ def chart_income_vs_expense(monthly_inc, monthly_exp, dark_mode=False):
 def chart_monthly_trend(monthly_spending, dark_mode=False):
     if not monthly_spending:
         return None
-    txt_color = '#e0e0e0' if dark_mode else '#2d3436'
-    grid_color = '#444444' if dark_mode else '#dfe6e9'
+    txt_color = "#e0e0e0" if dark_mode else "#2d3436"
+    grid_color = "#444444" if dark_mode else "#dfe6e9"
     months = list(monthly_spending.keys())
     values = list(monthly_spending.values())
     fig, ax = plt.subplots(figsize=(7, 3.8))
     fig.patch.set_alpha(0)
-    ax.fill_between(months, values, alpha=0.12, color='#008080', zorder=1)
-    ax.plot(months, values, color='#008080', linewidth=2.5, marker='o',
-            markersize=7, markerfacecolor='white', markeredgecolor='#008080',
-            markeredgewidth=2, zorder=2)
+    ax.fill_between(months, values, alpha=0.12, color="#008080", zorder=1)
+    ax.plot(
+        months,
+        values,
+        color="#008080",
+        linewidth=2.5,
+        marker="o",
+        markersize=7,
+        markerfacecolor="white",
+        markeredgecolor="#008080",
+        markeredgewidth=2,
+        zorder=2,
+    )
     for i, (m, v) in enumerate(zip(months, values)):
-        ax.text(i, v + max(values) * 0.03, f'₹{v:,.0f}',
-                ha='center', va='bottom', fontsize=8, color='#008080', fontweight='bold')
+        ax.text(
+            i,
+            v + max(values) * 0.03,
+            f"₹{v:,.0f}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="#008080",
+            fontweight="bold",
+        )
     ax.set_xticks(range(len(months)))
     ax.set_xticklabels(months, fontsize=9, color=txt_color)
-    ax.tick_params(axis='y', labelsize=8, colors=txt_color)
-    ax.tick_params(axis='x', colors=txt_color)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'₹{v/1000:.0f}k' if v >= 1000 else f'₹{v:.0f}'))
+    ax.tick_params(axis="y", labelsize=8, colors=txt_color)
+    ax.tick_params(axis="x", colors=txt_color)
+    ax.yaxis.set_major_formatter(
+        plt.FuncFormatter(
+            lambda v, _: f"₹{v / 1000:.0f}k" if v >= 1000 else f"₹{v:.0f}"
+        )
+    )
     ax.set_axisbelow(True)
     ax.yaxis.grid(True, color=grid_color, linewidth=0.8)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color(grid_color)
-    ax.spines['bottom'].set_color(grid_color)
-    ax.set_title('Monthly Spending Trend', fontsize=12, fontweight='bold', pad=10, color=txt_color)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color(grid_color)
+    ax.spines["bottom"].set_color(grid_color)
+    ax.set_title(
+        "Monthly Spending Trend",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+        color=txt_color,
+    )
     fig.tight_layout()
     return make_chart(fig)
 
@@ -2387,31 +3030,58 @@ def chart_monthly_trend(monthly_spending, dark_mode=False):
 def chart_category_breakdown(categories, dark_mode=False):
     if not categories:
         return None
-    txt_color = '#e0e0e0' if dark_mode else '#2d3436'
-    sub_color = '#b0b0b0' if dark_mode else '#636e72'
-    grid_color = '#444444' if dark_mode else '#dfe6e9'
+    txt_color = "#e0e0e0" if dark_mode else "#2d3436"
+    sub_color = "#b0b0b0" if dark_mode else "#636e72"
+    grid_color = "#444444" if dark_mode else "#dfe6e9"
     sorted_cats = sorted(categories.items(), key=lambda x: x[1], reverse=True)[:8]
     labels = [c[0] for c in sorted_cats]
     values = [c[1] for c in sorted_cats]
-    colors = ['#008080','#0984E3','#00CEC9','#00b894','#55EFC4',
-              '#FDCB6E','#FF924D','#FD79A8']
+    colors = [
+        "#008080",
+        "#0984E3",
+        "#00CEC9",
+        "#00b894",
+        "#55EFC4",
+        "#FDCB6E",
+        "#FF924D",
+        "#FD79A8",
+    ]
     fig, ax = plt.subplots(figsize=(6, max(3.5, len(labels) * 0.5)))
     fig.patch.set_alpha(0)
-    bars = ax.barh(labels[::-1], values[::-1], color=colors[:len(values)],
-                   edgecolor='white', linewidth=1, height=0.6, zorder=3)
+    bars = ax.barh(
+        labels[::-1],
+        values[::-1],
+        color=colors[: len(values)],
+        edgecolor="white",
+        linewidth=1,
+        height=0.6,
+        zorder=3,
+    )
     for bar, val in zip(bars, values[::-1]):
-        ax.text(bar.get_width() + max(values) * 0.01, bar.get_y() + bar.get_height()/2,
-                f'₹{val:,.0f}', va='center', fontsize=8.5, color=sub_color)
+        ax.text(
+            bar.get_width() + max(values) * 0.01,
+            bar.get_y() + bar.get_height() / 2,
+            f"₹{val:,.0f}",
+            va="center",
+            fontsize=8.5,
+            color=sub_color,
+        )
     ax.set_axisbelow(True)
     ax.xaxis.grid(True, color=grid_color, linewidth=0.8)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color(grid_color)
-    ax.spines['bottom'].set_color(grid_color)
-    ax.tick_params(axis='y', labelsize=9, colors=txt_color)
-    ax.tick_params(axis='x', labelsize=8, colors=txt_color)
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'₹{v/1000:.0f}k' if v >= 1000 else f'₹{v:.0f}'))
-    ax.set_title('Category Breakdown', fontsize=12, fontweight='bold', pad=10, color=txt_color)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color(grid_color)
+    ax.spines["bottom"].set_color(grid_color)
+    ax.tick_params(axis="y", labelsize=9, colors=txt_color)
+    ax.tick_params(axis="x", labelsize=8, colors=txt_color)
+    ax.xaxis.set_major_formatter(
+        plt.FuncFormatter(
+            lambda v, _: f"₹{v / 1000:.0f}k" if v >= 1000 else f"₹{v:.0f}"
+        )
+    )
+    ax.set_title(
+        "Category Breakdown", fontsize=12, fontweight="bold", pad=10, color=txt_color
+    )
     fig.tight_layout()
     return make_chart(fig)
 
@@ -2422,48 +3092,54 @@ def analysis():
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # ── Date-range filter ────────────────────────────────────────────
-    dr = request.args.get("dr", "this_month")   # this_month | prev_month | 2months | 3months | 6months | custom
+    dr = request.args.get(
+        "dr", "this_month"
+    )  # this_month | prev_month | 2months | 3months | 6months | custom
     custom_from = request.args.get("from", "")
-    custom_to   = request.args.get("to", "")
+    custom_to = request.args.get("to", "")
 
     if dr == "prev_month":
         first_this = datetime(now.year, now.month, 1)
-        date_to   = first_this - timedelta(seconds=1)
+        date_to = first_this - timedelta(seconds=1)
         date_from = datetime(date_to.year, date_to.month, 1)
         range_label = date_from.strftime("%B %Y")
     elif dr == "2months":
         date_from = datetime(now.year, now.month, 1) - timedelta(days=60)
         date_from = datetime(date_from.year, date_from.month, 1)
-        date_to   = now
+        date_to = now
         range_label = "Past 2 Months"
     elif dr == "3months":
         date_from = datetime(now.year, now.month, 1) - timedelta(days=90)
         date_from = datetime(date_from.year, date_from.month, 1)
-        date_to   = now
+        date_to = now
         range_label = "Past 3 Months"
     elif dr == "6months":
         date_from = datetime(now.year, now.month, 1) - timedelta(days=180)
         date_from = datetime(date_from.year, date_from.month, 1)
-        date_to   = now
+        date_to = now
         range_label = "Past 6 Months"
     elif dr == "all_time":
         date_from = datetime(2000, 1, 1)
-        date_to   = now
+        date_to = now
         range_label = "All Time"
     elif dr == "custom" and custom_from and custom_to:
         try:
             date_from = datetime.strptime(custom_from, "%Y-%m-%d")
-            date_to   = datetime.strptime(custom_to,   "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-            range_label = f"{date_from.strftime('%d %b %Y')} – {date_to.strftime('%d %b %Y')}"
+            date_to = datetime.strptime(custom_to, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59
+            )
+            range_label = (
+                f"{date_from.strftime('%d %b %Y')} – {date_to.strftime('%d %b %Y')}"
+            )
         except ValueError:
             date_from = datetime(now.year, now.month, 1)
-            date_to   = now
+            date_to = now
             range_label = "This Month"
             dr = "this_month"
     else:
         dr = "this_month"
         date_from = datetime(now.year, now.month, 1)
-        date_to   = now
+        date_to = now
         range_label = now.strftime("%B %Y")
 
     expenses_range = Expense.query.filter(
@@ -2472,13 +3148,16 @@ def analysis():
         Expense.date <= date_to,
     ).all()
 
-    total_income = sum(i.amount for i in Income.query.filter(
-        Income.user_id == current_user.id,
-        Income.date_received >= date_from,
-        Income.date_received <= date_to,
-    ).all())
-    total_spent   = sum(e.amount for e in expenses_range)
-    essential     = sum(e.amount for e in expenses_range if e.is_essential)
+    total_income = sum(
+        i.amount
+        for i in Income.query.filter(
+            Income.user_id == current_user.id,
+            Income.date_received >= date_from,
+            Income.date_received <= date_to,
+        ).all()
+    )
+    total_spent = sum(e.amount for e in expenses_range)
+    essential = sum(e.amount for e in expenses_range if e.is_essential)
     non_essential = total_spent - essential
 
     categories = {}
@@ -2486,7 +3165,7 @@ def analysis():
         categories[e.category] = categories.get(e.category, 0) + e.amount
 
     days_in_range = max((date_to - date_from).days + 1, 1)
-    burn_rate     = total_spent / days_in_range
+    burn_rate = total_spent / days_in_range
 
     has_data = bool(expenses_range) or total_income > 0
 
@@ -2511,9 +3190,21 @@ def analysis():
 #  Bank Statement Parser
 # ─────────────────────────────────────────────────────────────
 
-_DATE_FMTS = ["%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y",
-              "%Y-%m-%d", "%m/%d/%Y", "%d %b %Y", "%d %b %y",
-              "%d-%b-%Y", "%d-%b-%y", "%d/%b/%Y", "%d/%b/%y"]
+_DATE_FMTS = [
+    "%d/%m/%Y",
+    "%d-%m-%Y",
+    "%d/%m/%y",
+    "%d-%m-%y",
+    "%Y-%m-%d",
+    "%m/%d/%Y",
+    "%d %b %Y",
+    "%d %b %y",
+    "%d-%b-%Y",
+    "%d-%b-%y",
+    "%d/%b/%Y",
+    "%d/%b/%y",
+]
+
 
 def _parse_date(s):
     s = s.strip()
@@ -2524,12 +3215,14 @@ def _parse_date(s):
             continue
     return None
 
+
 def _clean_amount(s):
     s = re.sub(r"[₹,\s]", "", str(s)).strip()
     try:
         return float(s) if s else None
     except ValueError:
         return None
+
 
 def _make_txn(date_obj, desc, amount, txn_type):
     return {
@@ -2542,13 +3235,36 @@ def _make_txn(date_obj, desc, amount, txn_type):
         "subject": desc.strip()[:200],
     }
 
+
 def _detect_columns(headers):
     """Return (date_col, desc_col, debit_col, credit_col) indices or None."""
     h = [str(x).lower().strip() for x in headers]
-    date_kw   = ["date", "txn date", "value date", "transaction date", "posting date"]
-    desc_kw   = ["description", "narration", "particulars", "remarks", "details", "transaction remarks", "transaction details"]
-    debit_kw  = ["debit", "withdrawal", "dr", "debit amount", "withdrawal amount", "amount (dr)"]
-    credit_kw = ["credit", "deposit", "cr", "credit amount", "deposit amount", "amount (cr)"]
+    date_kw = ["date", "txn date", "value date", "transaction date", "posting date"]
+    desc_kw = [
+        "description",
+        "narration",
+        "particulars",
+        "remarks",
+        "details",
+        "transaction remarks",
+        "transaction details",
+    ]
+    debit_kw = [
+        "debit",
+        "withdrawal",
+        "dr",
+        "debit amount",
+        "withdrawal amount",
+        "amount (dr)",
+    ]
+    credit_kw = [
+        "credit",
+        "deposit",
+        "cr",
+        "credit amount",
+        "deposit amount",
+        "amount (cr)",
+    ]
     amount_kw = ["amount", "net amount"]
 
     def find(kws):
@@ -2567,14 +3283,15 @@ def _detect_columns(headers):
         return None
     return di, ni, dbi, cri, ami
 
+
 def _rows_to_txns(rows, header_idx):
     headers = rows[header_idx]
-    result  = _detect_columns(headers)
+    result = _detect_columns(headers)
     if result is None:
         return []
     di, ni, dbi, cri, ami = result
     txns = []
-    for row in rows[header_idx + 1:]:
+    for row in rows[header_idx + 1 :]:
         if len(row) <= max(x for x in [di, ni, dbi, cri, ami] if x is not None):
             continue
         date_val = _parse_date(str(row[di]))
@@ -2583,7 +3300,7 @@ def _rows_to_txns(rows, header_idx):
         desc = str(row[ni]).strip()
         if not desc or desc.lower() in ("", "nan", "none"):
             continue
-        debit  = _clean_amount(row[dbi]) if dbi is not None and dbi < len(row) else None
+        debit = _clean_amount(row[dbi]) if dbi is not None and dbi < len(row) else None
         credit = _clean_amount(row[cri]) if cri is not None and cri < len(row) else None
         amount = _clean_amount(row[ami]) if ami is not None and ami < len(row) else None
         if debit and debit > 0:
@@ -2594,6 +3311,7 @@ def _rows_to_txns(rows, header_idx):
             t = "income" if amount > 0 else "expense"
             txns.append(_make_txn(date_val, desc, abs(amount), t))
     return txns
+
 
 def _decrypt_office_file(file_bytes, password):
     """Decrypt a password-protected .xls/.xlsx file using msoffcrypto.
@@ -2625,6 +3343,7 @@ def parse_bank_statement_csv(content_bytes):
         if _detect_columns(row):
             return _rows_to_txns(rows, i)
     return []
+
 
 def parse_bank_statement_xlsx(content_bytes):
     """Parse an .xlsx file using openpyxl."""
@@ -2668,11 +3387,12 @@ def parse_bank_statement_xls(content_bytes):
             return _rows_to_txns(rows, i)
     return []
 
+
 def parse_bank_statement_pdf(content_bytes):
     DATE_RE = re.compile(
-        r'\b(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|\d{1,2}[/\-][A-Za-z]{3}[/\-]\d{2,4})\b'
+        r"\b(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|\d{1,2}[/\-][A-Za-z]{3}[/\-]\d{2,4})\b"
     )
-    AMOUNT_RE = re.compile(r'(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)')
+    AMOUNT_RE = re.compile(r"(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)")
     txns = []
     with pdfplumber.open(io.BytesIO(content_bytes)) as pdf:
         for page in pdf.pages:
@@ -2705,7 +3425,7 @@ def parse_bank_statement_pdf(content_bytes):
                 desc = DATE_RE.sub("", line)
                 for a in amounts:
                     desc = desc.replace(a, "")
-                desc = re.sub(r'\s+', ' ', desc).strip(" ,.-/")
+                desc = re.sub(r"\s+", " ", desc).strip(" ,.-/")
                 if not desc:
                     desc = "Bank transaction"
                 # Last amount is usually balance, second-last is txn amount
@@ -2716,7 +3436,7 @@ def parse_bank_statement_pdf(content_bytes):
                 if amt and amt > 0:
                     # Heuristic: look for Dr/Cr keywords
                     low = line.lower()
-                    if re.search(r'\bcr\b|\bcredit\b|\bdeposit\b', low):
+                    if re.search(r"\bcr\b|\bcredit\b|\bdeposit\b", low):
                         txns.append(_make_txn(date_obj, desc, amt, "income"))
                     else:
                         txns.append(_make_txn(date_obj, desc, amt, "expense"))
@@ -2728,6 +3448,7 @@ def parse_bank_statement_pdf(content_bytes):
             seen.add(key)
             unique.append(t)
     return unique
+
 
 def parse_bank_statement(file_bytes, filename, password=None):
     ext = filename.rsplit(".", 1)[-1].lower()
@@ -2741,7 +3462,9 @@ def parse_bank_statement(file_bytes, filename, password=None):
             except Exception:
                 raise ValueError("Wrong password or unable to decrypt the file.")
         elif _is_encrypted_office(file_bytes):
-            raise ValueError("This file is password-protected. Please enter the statement password.")
+            raise ValueError(
+                "This file is password-protected. Please enter the statement password."
+            )
         if ext == "xls":
             return parse_bank_statement_xls(data)
         else:
@@ -2755,20 +3478,22 @@ def parse_bank_statement(file_bytes, filename, password=None):
 #  Email Import Routes
 # ─────────────────────────────────────────────────────────────
 
+
 @app.route("/email-import")
 @login_required
 def email_import():
     imap_connected = "imap_config" in session
-    return render_template("email_import.html", imap_connected=imap_connected,
-                           presets=IMAP_PRESETS)
+    return render_template(
+        "email_import.html", imap_connected=imap_connected, presets=IMAP_PRESETS
+    )
 
 
 @app.route("/email-import/connect", methods=["POST"])
 @login_required
 def email_import_connect():
     data = request.get_json(force=True)
-    host     = data.get("host", "").strip()
-    port     = int(data.get("port", 993))
+    host = data.get("host", "").strip()
+    port = int(data.get("port", 993))
     email_addr = data.get("email", "").strip()
     password = data.get("password", "").strip()
 
@@ -2781,12 +3506,21 @@ def email_import_connect():
         mail.login(email_addr, password)
         mail.logout()
         session["imap_config"] = {
-            "host": host, "port": port,
-            "email": email_addr, "password": password,
+            "host": host,
+            "port": port,
+            "email": email_addr,
+            "password": password,
         }
-        return jsonify({"success": True, "message": f"Connected to {host} successfully!"})
+        return jsonify(
+            {"success": True, "message": f"Connected to {host} successfully!"}
+        )
     except imaplib.IMAP4.error as e:
-        return jsonify({"success": False, "message": f"Authentication failed — check your email/password or App Password. ({e})"})
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Authentication failed — check your email/password or App Password. ({e})",
+            }
+        )
     except Exception as e:
         return jsonify({"success": False, "message": f"Connection failed: {e}"})
 
@@ -2803,14 +3537,25 @@ def email_import_disconnect():
 def email_import_scan():
     cfg = session.get("imap_config")
     if not cfg:
-        return jsonify({"success": False, "message": "Not connected to any email account."})
+        return jsonify(
+            {"success": False, "message": "Not connected to any email account."}
+        )
     days = int(request.get_json(force=True).get("days", 30))
     try:
-        transactions = scan_imap_emails(cfg["host"], cfg["port"], cfg["email"], cfg["password"], days=days)
-        return jsonify({"success": True, "transactions": transactions, "count": len(transactions)})
+        transactions = scan_imap_emails(
+            cfg["host"], cfg["port"], cfg["email"], cfg["password"], days=days
+        )
+        return jsonify(
+            {"success": True, "transactions": transactions, "count": len(transactions)}
+        )
     except imaplib.IMAP4.error as e:
         session.pop("imap_config", None)
-        return jsonify({"success": False, "message": f"Email session expired — please reconnect. ({e})"})
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Email session expired — please reconnect. ({e})",
+            }
+        )
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
@@ -2823,11 +3568,9 @@ def email_import_do():
     for txn in items:
         try:
             txn_date = datetime.strptime(txn["date"], "%Y-%m-%d")
-            amount   = float(txn["amount"])
-            desc     = txn.get("description", "")[:200]
+            amount = float(txn["amount"])
+            desc = txn.get("description", "")[:200]
             txn_type = txn.get("type", "expense")
-            sub_cat  = txn.get("sub_cat", "Miscellaneous")
-            main_cat = txn.get("main_cat", "Other Expenses")
 
             if txn_type == "income":
                 source = txn.get("sub_cat", "Email Import")
@@ -2862,6 +3605,7 @@ def email_import_do():
 #  Bank Statement Routes
 # ─────────────────────────────────────────────────────────────
 
+
 @app.route("/bank-statement/upload", methods=["POST"])
 @login_required
 def bank_statement_upload():
@@ -2871,7 +3615,12 @@ def bank_statement_upload():
     filename = f.filename or ""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ("pdf", "xlsx", "xls", "csv", "zip"):
-        return jsonify({"success": False, "message": "Unsupported file type. Please upload a PDF, Excel (.xlsx/.xls), CSV, or ZIP file."})
+        return jsonify(
+            {
+                "success": False,
+                "message": "Unsupported file type. Please upload a PDF, Excel (.xlsx/.xls), CSV, or ZIP file.",
+            }
+        )
     try:
         file_bytes = f.read()
         if len(file_bytes) > 20 * 1024 * 1024:
@@ -2885,21 +3634,29 @@ def bank_statement_upload():
             try:
                 with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
                     entries = [
-                        n for n in zf.namelist()
+                        n
+                        for n in zf.namelist()
                         if not n.startswith("__MACOSX")
                         and not n.endswith("/")
                         and n.rsplit(".", 1)[-1].lower() in SUPPORTED
                     ]
                     if not entries:
-                        return jsonify({"success": False, "message": "No supported statement file found inside the ZIP (expected PDF, Excel, or CSV)."})
+                        return jsonify(
+                            {
+                                "success": False,
+                                "message": "No supported statement file found inside the ZIP (expected PDF, Excel, or CSV).",
+                            }
+                        )
                     all_txns = []
                     parsed_files = []
                     needs_pw = False
                     for entry in entries:
                         inner_bytes = zf.read(entry)
-                        inner_name  = entry.split("/")[-1]
+                        inner_name = entry.split("/")[-1]
                         try:
-                            txns = parse_bank_statement(inner_bytes, inner_name, password=password)
+                            txns = parse_bank_statement(
+                                inner_bytes, inner_name, password=password
+                            )
                             if txns:
                                 all_txns.extend(txns)
                                 parsed_files.append(inner_name)
@@ -2911,9 +3668,19 @@ def bank_statement_upload():
                             continue
                     if not all_txns:
                         if needs_pw:
-                            return jsonify({"success": False, "needs_password": True,
-                                            "message": "One or more files inside the ZIP are password-protected. Please enter the statement password."})
-                        return jsonify({"success": False, "message": "No transactions could be detected in any file inside the ZIP. Make sure it contains a standard bank statement."})
+                            return jsonify(
+                                {
+                                    "success": False,
+                                    "needs_password": True,
+                                    "message": "One or more files inside the ZIP are password-protected. Please enter the statement password.",
+                                }
+                            )
+                        return jsonify(
+                            {
+                                "success": False,
+                                "message": "No transactions could be detected in any file inside the ZIP. Make sure it contains a standard bank statement.",
+                            }
+                        )
                     # Deduplicate by (date, amount, type)
                     seen = set()
                     unique = []
@@ -2922,14 +3689,21 @@ def bank_statement_upload():
                         if key not in seen:
                             seen.add(key)
                             unique.append(t)
-                    return jsonify({
-                        "success": True,
-                        "transactions": unique,
-                        "count": len(unique),
-                        "source": f"ZIP ({', '.join(parsed_files)})",
-                    })
+                    return jsonify(
+                        {
+                            "success": True,
+                            "transactions": unique,
+                            "count": len(unique),
+                            "source": f"ZIP ({', '.join(parsed_files)})",
+                        }
+                    )
             except zipfile.BadZipFile:
-                return jsonify({"success": False, "message": "The uploaded file is not a valid ZIP archive."})
+                return jsonify(
+                    {
+                        "success": False,
+                        "message": "The uploaded file is not a valid ZIP archive.",
+                    }
+                )
 
         # ── Direct file upload ──
         try:
@@ -2937,11 +3711,25 @@ def bank_statement_upload():
         except ValueError as ve:
             msg = str(ve)
             if "password" in msg.lower():
-                return jsonify({"success": False, "needs_password": True, "message": msg})
+                return jsonify(
+                    {"success": False, "needs_password": True, "message": msg}
+                )
             return jsonify({"success": False, "message": msg})
         if not txns:
-            return jsonify({"success": False, "message": "No transactions could be detected. Make sure the file is a standard bank statement with Date, Description, and Amount columns."})
-        return jsonify({"success": True, "transactions": txns, "count": len(txns), "source": filename})
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "No transactions could be detected. Make sure the file is a standard bank statement with Date, Description, and Amount columns.",
+                }
+            )
+        return jsonify(
+            {
+                "success": True,
+                "transactions": txns,
+                "count": len(txns),
+                "source": filename,
+            }
+        )
     except Exception as e:
         return jsonify({"success": False, "message": f"Parsing failed: {str(e)}"})
 
@@ -2951,12 +3739,12 @@ def bank_statement_upload():
 def bank_statement_import():
     items = request.get_json(force=True).get("transactions", [])
     imported_count = 0
-    skipped_count  = 0
+    skipped_count = 0
     for txn in items:
         try:
             txn_date = datetime.strptime(txn["date"], "%Y-%m-%d")
-            amount   = float(txn["amount"])
-            desc     = txn.get("description", "")[:200]
+            amount = float(txn["amount"])
+            desc = txn.get("description", "")[:200]
             txn_type = txn.get("type", "expense")
             if txn_type == "income":
                 exists = Income.query.filter_by(
@@ -2969,13 +3757,15 @@ def bank_statement_import():
                 if exists:
                     skipped_count += 1
                     continue
-                db.session.add(Income(
-                    user_id=current_user.id,
-                    source="Bank Import",
-                    amount=amount,
-                    date_received=txn_date,
-                    description=desc,
-                ))
+                db.session.add(
+                    Income(
+                        user_id=current_user.id,
+                        source="Bank Import",
+                        amount=amount,
+                        date_received=txn_date,
+                        description=desc,
+                    )
+                )
             else:
                 exists = Expense.query.filter_by(
                     user_id=current_user.id,
@@ -2987,20 +3777,24 @@ def bank_statement_import():
                     skipped_count += 1
                     continue
                 cat, essential, sub = auto_categorize_transaction(desc)
-                db.session.add(Expense(
-                    user_id=current_user.id,
-                    category=cat,
-                    amount=amount,
-                    date=txn_date,
-                    description=desc,
-                    is_essential=essential,
-                    is_subscription=sub,
-                ))
+                db.session.add(
+                    Expense(
+                        user_id=current_user.id,
+                        category=cat,
+                        amount=amount,
+                        date=txn_date,
+                        description=desc,
+                        is_essential=essential,
+                        is_subscription=sub,
+                    )
+                )
             imported_count += 1
         except Exception:
             continue
     db.session.commit()
-    return jsonify({"success": True, "imported": imported_count, "skipped": skipped_count})
+    return jsonify(
+        {"success": True, "imported": imported_count, "skipped": skipped_count}
+    )
 
 
 @app.route("/retro_categorize", methods=["POST"])

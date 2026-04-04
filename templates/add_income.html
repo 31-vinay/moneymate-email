@@ -24,7 +24,7 @@
               {{ form.amount(class="form-control", placeholder="0.00", step="0.01", id="income_amount") }}
             </div>
             {% if form.amount.errors %}
-              {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
+            {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
             {% endif %}
             <div class="field-feedback" id="fb_income_amount"></div>
           </div>
@@ -38,10 +38,12 @@
             {{ form.description(class="form-control", placeholder="Optional note...") }}
           </div>
           <div class="mb-4">
-            <div class="form-check p-3 rounded" style="background:rgba(0, 128, 128,0.05);border:1.5px solid var(--border-color);">
+            <div class="form-check p-3 rounded"
+              style="background:rgba(0, 128, 128,0.05);border:1.5px solid var(--border-color);">
               {{ form.is_recurring(class="form-check-input") }}
               {{ form.is_recurring.label(class="form-check-label fw-semibold") }}
-              <div><small class="text-muted">Mark if this is a monthly salary or recurring income — it won't be cleared on monthly reset</small></div>
+              <div><small class="text-muted">Mark if this is a monthly salary or recurring income — it won't be cleared
+                  on monthly reset</small></div>
             </div>
           </div>
           <div class="d-grid gap-2">
@@ -70,23 +72,21 @@
           {% set _fd = inc_filter_days | default(none) %}
           {% for preset in [7, 14, 30, 60, 90] %}
           <a href="{{ url_for('add_income', days=preset) }}"
-             class="btn btn-sm rounded-pill {% if _fd == preset %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-             style="font-size:0.76rem;padding:2px 10px;">
+            class="btn btn-sm rounded-pill {% if _fd == preset %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            style="font-size:0.76rem;padding:2px 10px;">
             {{ preset }}d
           </a>
           {% endfor %}
           <a href="{{ url_for('add_income') }}"
-             class="btn btn-sm rounded-pill {% if not _fd %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-             style="font-size:0.76rem;padding:2px 10px;">
+            class="btn btn-sm rounded-pill {% if not _fd %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            style="font-size:0.76rem;padding:2px 10px;">
             All
           </a>
           <form method="get" action="{{ url_for('add_income') }}" class="d-flex align-items-center gap-1 ms-auto">
-            <input type="number" name="days" min="1" max="365"
-                   value="{{ inc_filter_days or '' }}"
-                   placeholder="Days…"
-                   class="form-control form-control-sm"
-                   style="width:80px;font-size:0.76rem;">
-            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:0.76rem;padding:2px 10px;">Go</button>
+            <input type="number" name="days" min="1" max="365" value="{{ inc_filter_days or '' }}" placeholder="Days…"
+              class="form-control form-control-sm" style="width:80px;font-size:0.76rem;">
+            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill"
+              style="font-size:0.76rem;padding:2px 10px;">Go</button>
           </form>
         </div>
       </div>
@@ -111,42 +111,44 @@
               </tr>
             </thead>
             <tbody>
-            {% for inc in incomes %}
-            <tr>
-              <td>
-                <span class="d-flex align-items-center gap-2">
-                  {% if inc.source == 'salary' %}<i class="bi bi-briefcase-fill text-primary"></i>
-                  {% elif inc.source == 'business' %}<i class="bi bi-building text-success"></i>
-                  {% elif inc.source == 'freelance' %}<i class="bi bi-laptop text-info"></i>
-                  {% elif inc.source == 'allowance' %}<i class="bi bi-gift text-warning"></i>
-                  {% else %}<i class="bi bi-coin text-secondary"></i>{% endif %}
-                  {{ inc.source|capitalize }}
-                  {% if inc.is_recurring %}<span class="badge bg-info ms-1" title="Recurring">🔁</span>{% endif %}
-                </span>
-              </td>
-              <td><strong class="text-success">₹{{ "%.2f"|format(inc.amount) }}</strong></td>
-              <td>
-                <div style="font-size:0.83rem;color:var(--text-muted);">{{ inc.date_received.strftime('%d %b %Y') }}</div>
-                {% if inc.created_at %}
-                <div style="font-size:0.75rem;color:var(--text-muted);">
-                  Added: <span class="local-time" data-utc="{{ inc.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></span>
-                </div>
-                {% endif %}
-              </td>
-              <td style="font-size:0.83rem;color:var(--text-muted);">{{ inc.description or '—' }}</td>
-              <td>
-                <div class="d-flex gap-1">
-                  <a href="{{ url_for('edit_income', id=inc.id) }}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-pencil"></i>
-                  </a>
-                  <a href="{{ url_for('delete_income', id=inc.id) }}" class="btn btn-danger btn-sm"
-                     onclick="return confirm('Delete this income entry?')">
-                    <i class="bi bi-trash"></i>
-                  </a>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
+              {% for inc in incomes %}
+              <tr>
+                <td>
+                  <span class="d-flex align-items-center gap-2">
+                    {% if inc.source == 'salary' %}<i class="bi bi-briefcase-fill text-primary"></i>
+                    {% elif inc.source == 'business' %}<i class="bi bi-building text-success"></i>
+                    {% elif inc.source == 'freelance' %}<i class="bi bi-laptop text-info"></i>
+                    {% elif inc.source == 'allowance' %}<i class="bi bi-gift text-warning"></i>
+                    {% else %}<i class="bi bi-coin text-secondary"></i>{% endif %}
+                    {{ inc.source|capitalize }}
+                    {% if inc.is_recurring %}<span class="badge bg-info ms-1" title="Recurring">🔁</span>{% endif %}
+                  </span>
+                </td>
+                <td><strong class="text-success">₹{{ "%.2f"|format(inc.amount) }}</strong></td>
+                <td>
+                  <div style="font-size:0.83rem;color:var(--text-muted);">{{ inc.date_received.strftime('%d %b %Y') }}
+                  </div>
+                  {% if inc.created_at %}
+                  <div style="font-size:0.75rem;color:var(--text-muted);">
+                    Added: <span class="local-time"
+                      data-utc="{{ inc.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></span>
+                  </div>
+                  {% endif %}
+                </td>
+                <td style="font-size:0.83rem;color:var(--text-muted);">{{ inc.description or '—' }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="{{ url_for('edit_income', id=inc.id) }}" class="btn btn-primary btn-sm">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{{ url_for('delete_income', id=inc.id) }}" class="btn btn-danger btn-sm"
+                      onclick="return confirm('Delete this income entry?')">
+                      <i class="bi bi-trash"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -165,21 +167,21 @@
 
 {% block scripts %}
 <script>
-(function() {
-  var amtEl = document.getElementById('income_amount');
-  var fbEl  = document.getElementById('fb_income_amount');
-  if (!amtEl || !fbEl) return;
-  amtEl.addEventListener('blur', function() {
-    var v = parseFloat(this.value);
-    if (!this.value) return;
-    var ok = v > 0;
-    fbEl.innerHTML = ok
-      ? '<i class="bi bi-check-circle-fill"></i> Valid amount'
-      : '<i class="bi bi-x-circle-fill"></i> Amount must be greater than 0';
-    fbEl.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
-    this.classList.toggle('is-valid-animated', ok);
-    this.classList.toggle('is-invalid-animated', !ok);
-  });
-})();
+  (function () {
+    var amtEl = document.getElementById('income_amount');
+    var fbEl = document.getElementById('fb_income_amount');
+    if (!amtEl || !fbEl) return;
+    amtEl.addEventListener('blur', function () {
+      var v = parseFloat(this.value);
+      if (!this.value) return;
+      var ok = v > 0;
+      fbEl.innerHTML = ok
+        ? '<i class="bi bi-check-circle-fill"></i> Valid amount'
+        : '<i class="bi bi-x-circle-fill"></i> Amount must be greater than 0';
+      fbEl.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+      this.classList.toggle('is-valid-animated', ok);
+      this.classList.toggle('is-invalid-animated', !ok);
+    });
+  })();
 </script>
 {% endblock %}

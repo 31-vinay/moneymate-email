@@ -3,10 +3,12 @@
 
 {% set uncategorized = expenses | selectattr('category', 'equalto', 'Uncategorized') | list %}
 {% if uncategorized %}
-<div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-3 mb-4 rounded-4" role="alert" style="border:none;box-shadow:0 4px 16px rgba(253,203,110,0.18);">
+<div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-3 mb-4 rounded-4" role="alert"
+  style="border:none;box-shadow:0 4px 16px rgba(253,203,110,0.18);">
   <i class="bi bi-envelope-arrow-down fs-4 flex-shrink-0" style="color:#FF924D;"></i>
   <div>
-    <strong>{{ uncategorized|length }} imported transaction{{ 's' if uncategorized|length != 1 }} need{{ '' if uncategorized|length != 1 else 's' }} categorising.</strong>
+    <strong>{{ uncategorized|length }} imported transaction{{ 's' if uncategorized|length != 1 }} need{{ '' if
+      uncategorized|length != 1 else 's' }} categorising.</strong>
     They are highlighted below — click the <i class="bi bi-pencil"></i> edit button on each one to assign a category.
   </div>
   <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
@@ -30,7 +32,8 @@
             {{ form.main_category.label(class="form-label") }}
             {{ form.main_category(class="form-select", id="mainCategory") }}
             {% if form.main_category.errors %}
-              {% for err in form.main_category.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
+            {% for err in form.main_category.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor
+            %}
             {% endif %}
           </div>
 
@@ -39,13 +42,15 @@
             {{ form.sub_category(class="form-select", id="subCategory") }}
             <small class="text-muted">Select a specific sub-category</small>
             {% if form.sub_category.errors %}
-              {% for err in form.sub_category.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
+            {% for err in form.sub_category.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor
+            %}
             {% endif %}
           </div>
 
           <div class="mb-3" id="customCategoryDiv" style="display:none;">
             {{ form.custom_category.label(class="form-label") }}
-            {{ form.custom_category(class="form-control", id="customCategory", placeholder="Enter your own category name") }}
+            {{ form.custom_category(class="form-control", id="customCategory", placeholder="Enter your own category
+            name") }}
             <small class="text-muted">Type a custom category name</small>
           </div>
 
@@ -53,10 +58,11 @@
             {{ form.amount.label(class="form-label") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-currency-rupee"></i></span>
-              {{ form.amount(class="form-control", type="number", step="0.01", placeholder="0.00", id="expense_amount") }}
+              {{ form.amount(class="form-control", type="number", step="0.01", placeholder="0.00", id="expense_amount")
+              }}
             </div>
             {% if form.amount.errors %}
-              {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
+            {% for err in form.amount.errors %}<small class="text-danger d-block mt-1">{{ err }}</small>{% endfor %}
             {% endif %}
             <div class="field-feedback" id="fb_expense_amount"></div>
           </div>
@@ -73,7 +79,8 @@
           </div>
 
           <div class="mb-3">
-            <div class="form-check p-3 rounded" style="background:rgba(0, 128, 128,0.05);border:1.5px solid var(--border-color);">
+            <div class="form-check p-3 rounded"
+              style="background:rgba(0, 128, 128,0.05);border:1.5px solid var(--border-color);">
               {{ form.is_subscription(class="form-check-input", id="isSubscription") }}
               {{ form.is_subscription.label(class="form-check-label fw-semibold") }}
               <div><small class="text-muted">Mark if this is a recurring monthly payment</small></div>
@@ -81,7 +88,8 @@
           </div>
 
           <div id="subscriptionDatesDiv" style="display:none;">
-            <div class="p-3 rounded mb-3" style="background:rgba(9,132,227,0.05);border:1.5px solid rgba(9,132,227,0.2);">
+            <div class="p-3 rounded mb-3"
+              style="background:rgba(9,132,227,0.05);border:1.5px solid rgba(9,132,227,0.2);">
               <p class="mb-2 fw-semibold" style="font-size:0.9rem;color:var(--brand-info);">
                 <i class="bi bi-calendar-range me-1"></i> Subscription Period
               </p>
@@ -126,23 +134,21 @@
           {% set _fd = exp_filter_days | default(none) %}
           {% for preset in [7, 14, 30, 60, 90] %}
           <a href="{{ url_for('add_expense', days=preset) }}"
-             class="btn btn-sm rounded-pill {% if _fd == preset %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-             style="font-size:0.76rem;padding:2px 10px;">
+            class="btn btn-sm rounded-pill {% if _fd == preset %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            style="font-size:0.76rem;padding:2px 10px;">
             {{ preset }}d
           </a>
           {% endfor %}
           <a href="{{ url_for('add_expense') }}"
-             class="btn btn-sm rounded-pill {% if not _fd %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-             style="font-size:0.76rem;padding:2px 10px;">
+            class="btn btn-sm rounded-pill {% if not _fd %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            style="font-size:0.76rem;padding:2px 10px;">
             All
           </a>
           <form method="get" action="{{ url_for('add_expense') }}" class="d-flex align-items-center gap-1 ms-auto">
-            <input type="number" name="days" min="1" max="365"
-                   value="{{ exp_filter_days or '' }}"
-                   placeholder="Days…"
-                   class="form-control form-control-sm"
-                   style="width:80px;font-size:0.76rem;">
-            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:0.76rem;padding:2px 10px;">Go</button>
+            <input type="number" name="days" min="1" max="365" value="{{ exp_filter_days or '' }}" placeholder="Days…"
+              class="form-control form-control-sm" style="width:80px;font-size:0.76rem;">
+            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill"
+              style="font-size:0.76rem;padding:2px 10px;">Go</button>
           </form>
         </div>
       </div>
@@ -154,9 +160,8 @@
         {% set uncategorized_count = expenses | selectattr('category', 'equalto', 'Uncategorized') | list | length %}
         {% if uncategorized_count > 0 %}
         <form method="post" action="{{ url_for('retro_categorize') }}" class="ms-auto mb-0">
-          <button type="submit" class="btn btn-sm btn-warning rounded-pill"
-                  style="font-size:0.74rem;padding:2px 10px;"
-                  title="Auto-categorize {{ uncategorized_count }} Uncategorized expense(s)">
+          <button type="submit" class="btn btn-sm btn-warning rounded-pill" style="font-size:0.74rem;padding:2px 10px;"
+            title="Auto-categorize {{ uncategorized_count }} Uncategorized expense(s)">
             <i class="bi bi-magic me-1"></i>Fix {{ uncategorized_count }} Uncategorized
           </button>
         </form>
@@ -178,14 +183,15 @@
               </tr>
             </thead>
             <tbody>
-            {% for exp in expenses %}
-            <tr {% if exp.category == 'Uncategorized' %}style="background:rgba(253,203,110,0.08);border-left:3px solid #fdcb6e;"{% endif %}>
-              <td style="font-size:0.88rem;">
-                {% if exp.category == 'Uncategorized' %}
+              {% for exp in expenses %}
+              <tr {% if exp.category=='Uncategorized'
+                %}style="background:rgba(253,203,110,0.08);border-left:3px solid #fdcb6e;" {% endif %}>
+                <td style="font-size:0.88rem;">
+                  {% if exp.category == 'Uncategorized' %}
                   <span class="badge badge-uncategorized" style="background:rgba(253,203,110,0.25);font-size:0.78rem;">
                     <i class="bi bi-envelope-arrow-down me-1"></i>Uncategorized
                   </span>
-                {% else %}
+                  {% else %}
                   {% if 'rent' in exp.category.lower() or 'mortgage' in exp.category.lower() %}🏠
                   {% elif 'food' in exp.category.lower() or 'groceries' in exp.category.lower() %}🍔
                   {% elif 'transport' in exp.category.lower() %}🚗
@@ -193,40 +199,44 @@
                   {% elif 'entertainment' in exp.category.lower() %}🎮
                   {% else %}📌{% endif %}
                   {{ exp.category }}
-                {% endif %}
-                {% if exp.is_subscription %}<i class="bi bi-arrow-repeat text-info ms-1" title="Subscription"></i>{% endif %}
-              </td>
-              <td><strong class="text-danger">₹{{ "%.2f"|format(exp.amount) }}</strong></td>
-              <td>
-                <div style="font-size:0.82rem;color:var(--text-muted);">{{ exp.date.strftime('%d %b %Y') }}</div>
-                {% if exp.created_at %}
-                <div style="font-size:0.75rem;color:var(--text-muted);">
-                  Added: <span class="local-time" data-utc="{{ exp.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></span>
-                </div>
-                {% endif %}
-              </td>
-              <td>
-                {% if exp.category == 'Uncategorized' %}
+                  {% endif %}
+                  {% if exp.is_subscription %}<i class="bi bi-arrow-repeat text-info ms-1" title="Subscription"></i>{%
+                  endif %}
+                </td>
+                <td><strong class="text-danger">₹{{ "%.2f"|format(exp.amount) }}</strong></td>
+                <td>
+                  <div style="font-size:0.82rem;color:var(--text-muted);">{{ exp.date.strftime('%d %b %Y') }}</div>
+                  {% if exp.created_at %}
+                  <div style="font-size:0.75rem;color:var(--text-muted);">
+                    Added: <span class="local-time"
+                      data-utc="{{ exp.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"></span>
+                  </div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if exp.category == 'Uncategorized' %}
                   <span class="badge badge-uncategorized" style="background:rgba(253,203,110,0.2);">Pending</span>
-                {% else %}
+                  {% else %}
                   <span class="badge {% if exp.is_essential %}bg-success{% else %}bg-warning{% endif %}">
                     {% if exp.is_essential %}Need{% else %}Want{% endif %}
                   </span>
-                {% endif %}
-              </td>
-              <td>
-                <div class="d-flex gap-1">
-                  <a href="{{ url_for('edit_expense', id=exp.id) }}" class="btn btn-sm {% if exp.category == 'Uncategorized' %}btn-warning{% else %}btn-primary{% endif %}" {% if exp.category == 'Uncategorized' %}title="Categorise this expense"{% endif %}>
-                    <i class="bi bi-{% if exp.category == 'Uncategorized' %}tag{% else %}pencil{% endif %}"></i>
-                  </a>
-                  <a href="{{ url_for('delete_expense', id=exp.id) }}" class="btn btn-danger btn-sm"
-                     onclick="return confirm('Delete this expense?')">
-                    <i class="bi bi-trash"></i>
-                  </a>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="{{ url_for('edit_expense', id=exp.id) }}"
+                      class="btn btn-sm {% if exp.category == 'Uncategorized' %}btn-warning{% else %}btn-primary{% endif %}"
+                      {% if exp.category=='Uncategorized' %}title="Categorise this expense" {% endif %}>
+                      <i class="bi bi-{% if exp.category == 'Uncategorized' %}tag{% else %}pencil{% endif %}"></i>
+                    </a>
+                    <a href="{{ url_for('delete_expense', id=exp.id) }}" class="btn btn-danger btn-sm"
+                      onclick="return confirm('Delete this expense?')">
+                      <i class="bi bi-trash"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -243,18 +253,18 @@
 </div>
 
 <script>
-document.getElementById('subcategoriesLoaded').value = 'true';
+  document.getElementById('subcategoriesLoaded').value = 'true';
 
-const isSubscriptionCheckbox = document.getElementById('isSubscription');
-const subscriptionDatesDiv = document.getElementById('subscriptionDatesDiv');
+  const isSubscriptionCheckbox = document.getElementById('isSubscription');
+  const subscriptionDatesDiv = document.getElementById('subscriptionDatesDiv');
 
-function toggleSubscriptionDates() {
-  subscriptionDatesDiv.style.display = isSubscriptionCheckbox.checked ? 'block' : 'none';
-}
-isSubscriptionCheckbox.addEventListener('change', toggleSubscriptionDates);
-toggleSubscriptionDates();
+  function toggleSubscriptionDates() {
+    subscriptionDatesDiv.style.display = isSubscriptionCheckbox.checked ? 'block' : 'none';
+  }
+  isSubscriptionCheckbox.addEventListener('change', toggleSubscriptionDates);
+  toggleSubscriptionDates();
 
-document.getElementById('mainCategory').addEventListener('change', function() {
+  document.getElementById('mainCategory').addEventListener('change', function () {
     const mainCat = this.value;
     const subCategoryDiv = document.getElementById('subCategoryDiv');
     const subCategorySelect = document.getElementById('subCategory');
@@ -262,89 +272,89 @@ document.getElementById('mainCategory').addEventListener('change', function() {
     const customCategoryInput = document.getElementById('customCategory');
 
     if (mainCat) {
-        fetch(`/get_subcategories/${mainCat}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success' && data.subcategories) {
-                    subCategorySelect.innerHTML = '<option value="">-- Select Sub Category --</option>';
-                    data.subcategories.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat;
-                        option.textContent = cat;
-                        subCategorySelect.appendChild(option);
-                    });
-                    subCategoryDiv.style.display = 'block';
-                    customCategoryDiv.style.display = 'none';
-                    customCategoryInput.value = '';
-                }
-            })
-            .catch(error => console.error('Error:', error));
+      fetch(`/get_subcategories/${mainCat}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success' && data.subcategories) {
+            subCategorySelect.innerHTML = '<option value="">-- Select Sub Category --</option>';
+            data.subcategories.forEach(cat => {
+              const option = document.createElement('option');
+              option.value = cat;
+              option.textContent = cat;
+              subCategorySelect.appendChild(option);
+            });
+            subCategoryDiv.style.display = 'block';
+            customCategoryDiv.style.display = 'none';
+            customCategoryInput.value = '';
+          }
+        })
+        .catch(error => console.error('Error:', error));
     } else {
-        subCategoryDiv.style.display = 'none';
-        customCategoryDiv.style.display = 'none';
-        customCategoryInput.value = '';
-        subCategorySelect.innerHTML = '<option value="">-- Select Sub Category First --</option>';
+      subCategoryDiv.style.display = 'none';
+      customCategoryDiv.style.display = 'none';
+      customCategoryInput.value = '';
+      subCategorySelect.innerHTML = '<option value="">-- Select Sub Category First --</option>';
     }
-});
+  });
 
-document.getElementById('subCategory').addEventListener('change', function() {
+  document.getElementById('subCategory').addEventListener('change', function () {
     const subCat = this.value;
     const customCategoryDiv = document.getElementById('customCategoryDiv');
     const customCategoryInput = document.getElementById('customCategory');
 
     if (subCat === 'Other (User Input)') {
-        customCategoryDiv.style.display = 'block';
-        customCategoryInput.required = true;
+      customCategoryDiv.style.display = 'block';
+      customCategoryInput.required = true;
     } else {
-        customCategoryDiv.style.display = 'none';
-        customCategoryInput.required = false;
-        customCategoryInput.value = '';
+      customCategoryDiv.style.display = 'none';
+      customCategoryInput.required = false;
+      customCategoryInput.value = '';
     }
-});
-
-(function() {
-  var amtEl = document.getElementById('expense_amount');
-  var fbEl  = document.getElementById('fb_expense_amount');
-  if (!amtEl || !fbEl) return;
-  amtEl.addEventListener('blur', function() {
-    var v = parseFloat(this.value);
-    if (!this.value) return;
-    var ok = v > 0;
-    fbEl.innerHTML = ok
-      ? '<i class="bi bi-check-circle-fill"></i> Valid amount'
-      : '<i class="bi bi-x-circle-fill"></i> Amount must be greater than 0';
-    fbEl.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
-    this.classList.toggle('is-valid-animated', ok);
-    this.classList.toggle('is-invalid-animated', !ok);
   });
-})();
 
-{% if edit %}
-document.addEventListener('DOMContentLoaded', function() {
+  (function () {
+    var amtEl = document.getElementById('expense_amount');
+    var fbEl = document.getElementById('fb_expense_amount');
+    if (!amtEl || !fbEl) return;
+    amtEl.addEventListener('blur', function () {
+      var v = parseFloat(this.value);
+      if (!this.value) return;
+      var ok = v > 0;
+      fbEl.innerHTML = ok
+        ? '<i class="bi bi-check-circle-fill"></i> Valid amount'
+        : '<i class="bi bi-x-circle-fill"></i> Amount must be greater than 0';
+      fbEl.className = 'field-feedback show ' + (ok ? 'valid' : 'invalid');
+      this.classList.toggle('is-valid-animated', ok);
+      this.classList.toggle('is-invalid-animated', !ok);
+    });
+  })();
+
+  {% if edit %}
+  document.addEventListener('DOMContentLoaded', function () {
     const mainCat = '{{ form.main_category.data }}';
     const subCat = '{{ form.sub_category.data }}';
     const customCat = '{{ form.custom_category.data }}';
 
     if (mainCat) {
-        const mainSelect = document.getElementById('mainCategory');
-        mainSelect.value = mainCat;
-        const event = new Event('change', { bubbles: true });
-        mainSelect.dispatchEvent(event);
+      const mainSelect = document.getElementById('mainCategory');
+      mainSelect.value = mainCat;
+      const event = new Event('change', {bubbles: true});
+      mainSelect.dispatchEvent(event);
 
-        setTimeout(function() {
-            const subSelect = document.getElementById('subCategory');
-            if (subSelect) {
-                subSelect.value = subCat;
-                const subEvent = new Event('change', { bubbles: true });
-                subSelect.dispatchEvent(subEvent);
-            }
-            if (customCat) {
-                document.getElementById('customCategory').value = customCat;
-            }
-        }, 500);
+      setTimeout(function () {
+        const subSelect = document.getElementById('subCategory');
+        if (subSelect) {
+          subSelect.value = subCat;
+          const subEvent = new Event('change', {bubbles: true});
+          subSelect.dispatchEvent(subEvent);
+        }
+        if (customCat) {
+          document.getElementById('customCategory').value = customCat;
+        }
+      }, 500);
     }
-});
-{% endif %}
+  });
+  {% endif %}
 </script>
 
 {% endblock %}

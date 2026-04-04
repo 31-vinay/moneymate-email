@@ -2,176 +2,337 @@
 {% block content %}
 
 <style>
-.ei-wrap { max-width: 860px; margin: 0 auto; }
+  .ei-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+  }
 
-/* Tab switcher */
-.import-tabs {
-  display: flex; gap: 4px; margin-bottom: 28px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border-color);
-  border-radius: 50px;
-  padding: 5px;
-  width: fit-content;
-}
-.import-tab {
-  padding: 8px 22px;
-  border-radius: 50px;
-  font-weight: 700; font-size: 0.88rem;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border: none; background: transparent;
-  transition: all .2s;
-  display: flex; align-items: center; gap: 7px;
-}
-.import-tab.active {
-  background: var(--gradient-brand);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(0,128,128,0.3);
-}
-.import-tab:not(.active):hover { color: var(--brand-primary); }
+  /* Tab switcher */
+  .import-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 28px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: 50px;
+    padding: 5px;
+    width: fit-content;
+  }
 
-/* Step cards */
-.ei-card {
-  border-radius: 20px;
-  border: 1.5px solid var(--border-color);
-  background: var(--bg-card);
-  margin-bottom: 24px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 128, 128,0.07);
-  transition: opacity .3s;
-}
-.ei-card-header {
-  background: var(--gradient-brand);
-  color: #fff;
-  padding: 18px 26px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.ei-card-header .card-icon {
-  width: 44px; height: 44px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem; flex-shrink: 0;
-}
-.ei-card-header h5 { font-weight: 700; margin: 0; font-size: 1rem; }
-.ei-card-header p  { margin: 0; opacity: .82; font-size: 0.8rem; }
-.ei-card-body { padding: 22px 26px; }
+  .import-tab {
+    padding: 8px 22px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border: none;
+    background: transparent;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
 
-/* Provider pills */
-.provider-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-.provider-pill {
-  border: 2px solid var(--border-color);
-  border-radius: 50px;
-  padding: 7px 18px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  background: var(--bg-card);
-  transition: all .2s;
-  display: flex; align-items: center; gap: 7px;
-}
-.provider-pill:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
-.provider-pill.active { border-color: var(--brand-primary); background: rgba(0, 128, 128,0.1); color: var(--brand-primary); }
+  .import-tab.active {
+    background: var(--gradient-brand);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 128, 128, 0.3);
+  }
 
-/* Step indicator */
-.step-row { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
-.step-badge {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: var(--gradient-brand);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.step-label { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); }
+  .import-tab:not(.active):hover {
+    color: var(--brand-primary);
+  }
 
-/* Status badge */
-.conn-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 14px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;
-}
-.conn-badge.connected    { background: rgba(0,184,148,0.12); color: #00b894; }
-.conn-badge.disconnected { background: rgba(255, 146, 77,0.1);  color: #FF924D; }
+  /* Step cards */
+  .ei-card {
+    border-radius: 20px;
+    border: 1.5px solid var(--border-color);
+    background: var(--bg-card);
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 128, 128, 0.07);
+    transition: opacity .3s;
+  }
 
-/* Results table */
-.txn-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.87rem; }
-.txn-table th {
-  background: rgba(0, 128, 128,0.08);
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  padding: 10px 12px;
-  border-bottom: 2px solid var(--border-color);
-}
-.txn-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-.txn-table tr:last-child td { border-bottom: none; }
-.txn-table tr:hover td { background: rgba(0, 128, 128,0.03); }
+  .ei-card-header {
+    background: var(--gradient-brand);
+    color: #fff;
+    padding: 18px 26px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
 
-.badge-income  { background: rgba(0,184,148,0.12); color: #00b894; }
-.badge-expense { background: rgba(255, 146, 77,0.1);  color: #FF924D; }
-.type-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 10px; border-radius: 50px; font-size: 0.76rem; font-weight: 700;
-}
+  .ei-card-header .card-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
 
-.select-all-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ei-card-header h5 {
+    font-weight: 700;
+    margin: 0;
+    font-size: 1rem;
+  }
 
-/* Loading spinner */
-.scan-spinner { display: none; }
-.scan-spinner.active { display: inline-block; }
+  .ei-card-header p {
+    margin: 0;
+    opacity: .82;
+    font-size: 0.8rem;
+  }
 
-/* Security notice */
-.security-note {
-  background: rgba(0, 128, 128,0.07);
-  border-left: 4px solid var(--brand-primary);
-  border-radius: 0 12px 12px 0;
-  padding: 12px 16px;
-  font-size: 0.83rem;
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-}
-.security-note strong { color: var(--text-primary); }
+  .ei-card-body {
+    padding: 22px 26px;
+  }
 
-.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
-.empty-state i { font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 10px; }
+  /* Provider pills */
+  .provider-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
 
-/* File upload drop zone */
-.upload-zone {
-  border: 2.5px dashed var(--border-color);
-  border-radius: 16px;
-  padding: 40px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .25s;
-  background: rgba(0, 128, 128,0.03);
-}
-.upload-zone:hover, .upload-zone.drag-over {
-  border-color: var(--brand-primary);
-  background: rgba(0, 128, 128,0.08);
-}
-.upload-zone i { font-size: 2.8rem; color: var(--brand-primary); opacity: .7; display: block; margin-bottom: 12px; }
-.upload-zone .upload-title { font-weight: 700; font-size: 1rem; color: var(--text-primary); margin-bottom: 5px; }
-.upload-zone .upload-sub   { font-size: 0.83rem; color: var(--text-secondary); }
-.upload-zone .file-chosen  { font-size: 0.88rem; color: var(--brand-primary); font-weight: 600; margin-top: 10px; }
+  .provider-pill {
+    border: 2px solid var(--border-color);
+    border-radius: 50px;
+    padding: 7px 18px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
 
-/* Bank list chips */
-.bank-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.bank-chip {
-  background: rgba(0,128,128,0.07);
-  border: 1px solid var(--border-color);
-  border-radius: 50px;
-  padding: 4px 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
+  .provider-pill:hover {
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+  }
+
+  .provider-pill.active {
+    border-color: var(--brand-primary);
+    background: rgba(0, 128, 128, 0.1);
+    color: var(--brand-primary);
+  }
+
+  /* Step indicator */
+  .step-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .step-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gradient-brand);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-label {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+  }
+
+  /* Status badge */
+  .conn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .conn-badge.connected {
+    background: rgba(0, 184, 148, 0.12);
+    color: #00b894;
+  }
+
+  .conn-badge.disconnected {
+    background: rgba(255, 146, 77, 0.1);
+    color: #FF924D;
+  }
+
+  /* Results table */
+  .txn-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.87rem;
+  }
+
+  .txn-table th {
+    background: rgba(0, 128, 128, 0.08);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .txn-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+  }
+
+  .txn-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .txn-table tr:hover td {
+    background: rgba(0, 128, 128, 0.03);
+  }
+
+  .badge-income {
+    background: rgba(0, 184, 148, 0.12);
+    color: #00b894;
+  }
+
+  .badge-expense {
+    background: rgba(255, 146, 77, 0.1);
+    color: #FF924D;
+  }
+
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .select-all-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* Loading spinner */
+  .scan-spinner {
+    display: none;
+  }
+
+  .scan-spinner.active {
+    display: inline-block;
+  }
+
+  /* Security notice */
+  .security-note {
+    background: rgba(0, 128, 128, 0.07);
+    border-left: 4px solid var(--brand-primary);
+    border-radius: 0 12px 12px 0;
+    padding: 12px 16px;
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .security-note strong {
+    color: var(--text-primary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state i {
+    font-size: 2.5rem;
+    opacity: 0.3;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  /* File upload drop zone */
+  .upload-zone {
+    border: 2.5px dashed var(--border-color);
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s;
+    background: rgba(0, 128, 128, 0.03);
+  }
+
+  .upload-zone:hover,
+  .upload-zone.drag-over {
+    border-color: var(--brand-primary);
+    background: rgba(0, 128, 128, 0.08);
+  }
+
+  .upload-zone i {
+    font-size: 2.8rem;
+    color: var(--brand-primary);
+    opacity: .7;
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .upload-zone .upload-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+  }
+
+  .upload-zone .upload-sub {
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+  }
+
+  .upload-zone .file-chosen {
+    font-size: 0.88rem;
+    color: var(--brand-primary);
+    font-weight: 600;
+    margin-top: 10px;
+  }
+
+  /* Bank list chips */
+  .bank-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .bank-chip {
+    background: rgba(0, 128, 128, 0.07);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
 </style>
 
 <div class="ei-wrap">
@@ -216,11 +377,15 @@
         {% else %}
         <div class="security-note">
           <strong><i class="bi bi-shield-lock me-1"></i>Security note:</strong>
-          Your password is sent securely over SSL and only stored in your browser session — it is erased when you log out.
+          Your password is sent securely over SSL and only stored in your browser session — it is erased when you log
+          out.
           For Gmail/Outlook we strongly recommend using an <strong>App Password</strong> instead of your main password.
         </div>
 
-        <div class="step-row"><div class="step-badge">1</div><div class="step-label">Choose your email provider</div></div>
+        <div class="step-row">
+          <div class="step-badge">1</div>
+          <div class="step-label">Choose your email provider</div>
+        </div>
         <div class="provider-pills" id="providerPills">
           <div class="provider-pill active" data-host="imap.gmail.com" data-port="993" onclick="selectProvider(this)">
             <i class="bi bi-google"></i> Gmail
@@ -250,7 +415,10 @@
           </div>
         </div>
 
-        <div class="step-row mt-3"><div class="step-badge">2</div><div class="step-label">Enter your credentials</div></div>
+        <div class="step-row mt-3">
+          <div class="step-badge">2</div>
+          <div class="step-label">Enter your credentials</div>
+        </div>
         <div class="row g-3 mb-4">
           <div class="col-sm-6">
             <label class="form-label fw-semibold small">Email Address</label>
@@ -262,12 +430,15 @@
           <div class="col-sm-6">
             <label class="form-label fw-semibold small">
               App Password
-              <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="ms-1" style="font-size:0.78rem;">(What's this?)</a>
+              <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="ms-1"
+                style="font-size:0.78rem;">(What's this?)</a>
             </label>
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-key"></i></span>
-              <input type="password" id="imapPassword" class="form-control" placeholder="App password or email password">
-              <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()"><i class="bi bi-eye" id="eyeIcon"></i></button>
+              <input type="password" id="imapPassword" class="form-control"
+                placeholder="App password or email password">
+              <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()"><i class="bi bi-eye"
+                  id="eyeIcon"></i></button>
             </div>
           </div>
         </div>
@@ -305,14 +476,15 @@
             </select>
           </div>
           <div class="col-sm-auto">
-            <button class="btn btn-primary rounded-pill px-4" id="btnScan" onclick="scanEmails()" {% if not imap_connected %}disabled{% endif %}>
+            <button class="btn btn-primary rounded-pill px-4" id="btnScan" onclick="scanEmails()" {% if not
+              imap_connected %}disabled{% endif %}>
               <i class="bi bi-search me-2"></i>Scan Emails
               <span class="spinner-border spinner-border-sm ms-2 d-none" id="scanSpinner"></span>
             </button>
           </div>
         </div>
         <div id="scanError" class="alert alert-danger d-none"></div>
-        <div id="scanInfo"  class="alert alert-info  d-none"></div>
+        <div id="scanInfo" class="alert alert-info  d-none"></div>
       </div>
     </div>
 
@@ -338,7 +510,7 @@
           </button>
         </div>
         <div id="importSuccess" class="alert alert-success d-none"></div>
-        <div id="importError"   class="alert alert-danger  d-none"></div>
+        <div id="importError" class="alert alert-danger  d-none"></div>
         <div class="table-responsive">
           <table class="txn-table" id="txnTable">
             <thead>
@@ -380,18 +552,24 @@
 
         <div class="security-note">
           <strong><i class="bi bi-shield-lock me-1"></i>Your data stays private:</strong>
-          The file is processed on our server and immediately discarded — nothing is stored. Only the detected transactions are shown to you.
+          The file is processed on our server and immediately discarded — nothing is stored. Only the detected
+          transactions are shown to you.
         </div>
 
-        <div class="step-row"><div class="step-badge">1</div><div class="step-label">Choose your statement file or ZIP archive</div></div>
+        <div class="step-row">
+          <div class="step-badge">1</div>
+          <div class="step-label">Choose your statement file or ZIP archive</div>
+        </div>
 
         <div class="upload-zone" id="uploadZone" onclick="document.getElementById('stmtFile').click()">
           <i class="bi bi-cloud-arrow-up"></i>
           <div class="upload-title">Click to browse or drag &amp; drop</div>
-          <div class="upload-sub">PDF, Excel (.xlsx / .xls), CSV — or a <strong>ZIP</strong> containing any of those · Max 20 MB</div>
+          <div class="upload-sub">PDF, Excel (.xlsx / .xls), CSV — or a <strong>ZIP</strong> containing any of those ·
+            Max 20 MB</div>
           <div class="file-chosen d-none" id="fileChosen"></div>
         </div>
-        <input type="file" id="stmtFile" accept=".pdf,.xlsx,.xls,.csv,.zip" style="display:none" onchange="onFileSelected()">
+        <input type="file" id="stmtFile" accept=".pdf,.xlsx,.xls,.csv,.zip" style="display:none"
+          onchange="onFileSelected()">
 
         <div class="mt-3">
           <p class="small fw-semibold mb-2" style="color:var(--text-secondary);">Works with statements from:</p>
@@ -416,9 +594,9 @@
           </label>
           <div class="input-group" style="max-width:340px;">
             <input type="password" class="form-control" id="stmtPassword" placeholder="e.g. DDMMYYYY or Customer ID"
-                   style="border-radius:10px 0 0 10px;" autocomplete="off">
-            <button class="btn btn-outline-secondary" type="button" id="btnTogglePw"
-                    onclick="togglePwVisibility()" style="border-radius:0 10px 10px 0;">
+              style="border-radius:10px 0 0 10px;" autocomplete="off">
+            <button class="btn btn-outline-secondary" type="button" id="btnTogglePw" onclick="togglePwVisibility()"
+              style="border-radius:0 10px 10px 0;">
               <i class="bi bi-eye" id="pwEyeIcon"></i>
             </button>
           </div>
@@ -459,9 +637,11 @@
             <span class="spinner-border spinner-border-sm ms-2 d-none" id="bImportSpinner"></span>
           </button>
         </div>
-        <div id="bSourceNote" class="alert d-none mb-3" style="background:rgba(0,128,128,0.07);border-left:4px solid var(--brand-primary);border-radius:0 12px 12px 0;color:var(--text-secondary);font-size:0.83rem;padding:10px 14px;"></div>
+        <div id="bSourceNote" class="alert d-none mb-3"
+          style="background:rgba(0,128,128,0.07);border-left:4px solid var(--brand-primary);border-radius:0 12px 12px 0;color:var(--text-secondary);font-size:0.83rem;padding:10px 14px;">
+        </div>
         <div id="bImportSuccess" class="alert alert-success d-none"></div>
-        <div id="bImportError"   class="alert alert-danger  d-none"></div>
+        <div id="bImportError" class="alert alert-danger  d-none"></div>
         <div class="table-responsive">
           <table class="txn-table" id="bTxnTable">
             <thead>
@@ -479,7 +659,8 @@
         <div id="bEmptyResults" class="empty-state d-none">
           <i class="bi bi-inbox"></i>
           <p class="fw-semibold">No transactions detected in this file.</p>
-          <p class="small">Make sure your statement has standard column headers like Date, Description, Debit, and Credit.</p>
+          <p class="small">Make sure your statement has standard column headers like Date, Description, Debit, and
+            Credit.</p>
         </div>
       </div>
     </div>
@@ -492,297 +673,297 @@
 
 {% block scripts %}
 <script>
-let selectedHost = 'imap.gmail.com';
-let selectedPort = 993;
-let parsedTransactions = [];
-let bankTransactions   = [];
+  let selectedHost = 'imap.gmail.com';
+  let selectedPort = 993;
+  let parsedTransactions = [];
+  let bankTransactions = [];
 
-// ── Tab switcher ────────────────────────────────────────────
-function switchTab(tab) {
-  document.getElementById('panel-email').style.display = tab === 'email' ? '' : 'none';
-  document.getElementById('panel-bank').style.display  = tab === 'bank'  ? '' : 'none';
-  document.getElementById('tab-email').classList.toggle('active', tab === 'email');
-  document.getElementById('tab-bank').classList.toggle('active',  tab === 'bank');
-}
-
-// ── Email: Provider selection ────────────────────────────────
-function selectProvider(el, isCustom) {
-  document.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  selectedHost = el.dataset.host;
-  selectedPort = parseInt(el.dataset.port) || 993;
-  const customRow = document.getElementById('customHostRow');
-  if (isCustom) {
-    customRow.style.setProperty('display', '', 'important');
-    selectedHost = '';
-  } else {
-    customRow.style.setProperty('display', 'none', 'important');
+  // ── Tab switcher ────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('panel-email').style.display = tab === 'email' ? '' : 'none';
+    document.getElementById('panel-bank').style.display = tab === 'bank' ? '' : 'none';
+    document.getElementById('tab-email').classList.toggle('active', tab === 'email');
+    document.getElementById('tab-bank').classList.toggle('active', tab === 'bank');
   }
-}
 
-function togglePwd() {
-  const inp = document.getElementById('imapPassword');
-  const icon = document.getElementById('eyeIcon');
-  if (inp.type === 'password') {
-    inp.type = 'text'; icon.className = 'bi bi-eye-slash';
-  } else {
-    inp.type = 'password'; icon.className = 'bi bi-eye';
-  }
-}
-
-// ── Email: Connect ───────────────────────────────────────────
-async function connectEmail() {
-  const host  = document.getElementById('imapHost')?.value || selectedHost;
-  const port  = document.getElementById('imapPort')?.value || selectedPort;
-  const email = document.getElementById('imapEmail').value.trim();
-  const pass  = document.getElementById('imapPassword').value;
-  const errEl = document.getElementById('connectError');
-  const spin  = document.getElementById('connectSpinner');
-  const btn   = document.getElementById('btnConnect');
-
-  errEl.classList.add('d-none');
-  spin.classList.remove('d-none');
-  btn.disabled = true;
-
-  try {
-    const res = await fetch('/email-import/connect', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({host, port, email, password: pass})
-    });
-    const data = await res.json();
-    if (data.success) {
-      location.reload();
+  // ── Email: Provider selection ────────────────────────────────
+  function selectProvider(el, isCustom) {
+    document.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    selectedHost = el.dataset.host;
+    selectedPort = parseInt(el.dataset.port) || 993;
+    const customRow = document.getElementById('customHostRow');
+    if (isCustom) {
+      customRow.style.setProperty('display', '', 'important');
+      selectedHost = '';
     } else {
-      errEl.textContent = data.message;
-      errEl.classList.remove('d-none');
+      customRow.style.setProperty('display', 'none', 'important');
     }
-  } catch(e) {
-    errEl.textContent = 'Network error — please try again.';
-    errEl.classList.remove('d-none');
   }
-  spin.classList.add('d-none');
-  btn.disabled = false;
-}
 
-document.getElementById('btnDisconnect')?.addEventListener('click', async () => {
-  await fetch('/email-import/disconnect', {method: 'POST'});
-  location.reload();
-});
-
-// ── Email: Scan ──────────────────────────────────────────────
-async function scanEmails() {
-  const days  = document.getElementById('scanDays').value;
-  const errEl = document.getElementById('scanError');
-  const infoEl= document.getElementById('scanInfo');
-  const spin  = document.getElementById('scanSpinner');
-  const btn   = document.getElementById('btnScan');
-  const card  = document.getElementById('card-results');
-
-  errEl.classList.add('d-none');
-  infoEl.textContent = 'Scanning your inbox… this may take a moment.';
-  infoEl.classList.remove('d-none');
-  spin.classList.remove('d-none');
-  btn.disabled = true;
-  card.classList.add('d-none');
-
-  try {
-    const res = await fetch('/email-import/scan', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({days: parseInt(days)})
-    });
-    const data = await res.json();
-    infoEl.classList.add('d-none');
-    if (data.success) {
-      parsedTransactions = data.transactions;
-      renderResults(parsedTransactions, 'email');
-      card.classList.remove('d-none');
+  function togglePwd() {
+    const inp = document.getElementById('imapPassword');
+    const icon = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+      inp.type = 'text'; icon.className = 'bi bi-eye-slash';
     } else {
-      errEl.textContent = data.message;
-      errEl.classList.remove('d-none');
+      inp.type = 'password'; icon.className = 'bi bi-eye';
     }
-  } catch(e) {
-    infoEl.classList.add('d-none');
-    errEl.textContent = 'Network error during scan.';
-    errEl.classList.remove('d-none');
   }
-  spin.classList.add('d-none');
-  btn.disabled = false;
-}
 
-// ── Bank: File upload & drag-drop ────────────────────────────
-function onFileSelected() {
-  const f = document.getElementById('stmtFile').files[0];
-  const chosen = document.getElementById('fileChosen');
-  if (f) {
-    const ext = f.name.split('.').pop().toLowerCase();
-    const icon = ext === 'zip' ? '🗜️' : '📄';
-    const label = ext === 'zip' ? ' (ZIP archive — statements will be extracted automatically)' : '';
-    chosen.innerHTML = icon + ' <strong>' + f.name + '</strong><span style="color:var(--text-muted);font-size:0.82rem;">' + label + '</span>';
-    chosen.classList.remove('d-none');
-    document.getElementById('btnParse').disabled = false;
-  }
-}
+  // ── Email: Connect ───────────────────────────────────────────
+  async function connectEmail() {
+    const host = document.getElementById('imapHost')?.value || selectedHost;
+    const port = document.getElementById('imapPort')?.value || selectedPort;
+    const email = document.getElementById('imapEmail').value.trim();
+    const pass = document.getElementById('imapPassword').value;
+    const errEl = document.getElementById('connectError');
+    const spin = document.getElementById('connectSpinner');
+    const btn = document.getElementById('btnConnect');
 
-const zone = document.getElementById('uploadZone');
-if (zone) {
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('drag-over');
-    const dt = e.dataTransfer;
-    if (dt.files.length) {
-      document.getElementById('stmtFile').files = dt.files;
-      onFileSelected();
-    }
-  });
-}
+    errEl.classList.add('d-none');
+    spin.classList.remove('d-none');
+    btn.disabled = true;
 
-// ── Bank: Parse ──────────────────────────────────────────────
-function togglePwVisibility() {
-  const inp  = document.getElementById('stmtPassword');
-  const icon = document.getElementById('pwEyeIcon');
-  if (inp.type === 'password') { inp.type = 'text';     icon.className = 'bi bi-eye-slash'; }
-  else                         { inp.type = 'password'; icon.className = 'bi bi-eye'; }
-}
-
-async function parseStatement() {
-  const f = document.getElementById('stmtFile').files[0];
-  if (!f) return;
-  const errEl     = document.getElementById('parseError');
-  const spin      = document.getElementById('parseSpinner');
-  const btn       = document.getElementById('btnParse');
-  const card      = document.getElementById('card-bank-results');
-  const pwRow     = document.getElementById('passwordRow');
-  const pwInput   = document.getElementById('stmtPassword');
-
-  errEl.classList.add('d-none');
-  spin.classList.remove('d-none');
-  btn.disabled = true;
-  card.classList.add('d-none');
-
-  try {
-    const fd = new FormData();
-    fd.append('file', f);
-    const pw = pwInput ? pwInput.value.trim() : '';
-    if (pw) fd.append('password', pw);
-
-    const res  = await fetch('/bank-statement/upload', {method: 'POST', body: fd});
-    const data = await res.json();
-
-    if (data.success) {
-      bankTransactions = data.transactions;
-      renderResults(bankTransactions, 'bank');
-      card.classList.remove('d-none');
-      pwRow.classList.add('d-none');
-      const srcNote = document.getElementById('bSourceNote');
-      if (srcNote && data.source) {
-        srcNote.textContent = 'Parsed from: ' + data.source;
-        srcNote.classList.remove('d-none');
-      }
-      card.scrollIntoView({behavior: 'smooth', block: 'start'});
-    } else {
-      if (data.needs_password) {
-        pwRow.classList.remove('d-none');
-        pwInput.focus();
-        errEl.innerHTML = '<i class="bi bi-lock me-1"></i>' + data.message;
+    try {
+      const res = await fetch('/email-import/connect', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({host, port, email, password: pass})
+      });
+      const data = await res.json();
+      if (data.success) {
+        location.reload();
       } else {
         errEl.textContent = data.message;
+        errEl.classList.remove('d-none');
       }
+    } catch (e) {
+      errEl.textContent = 'Network error — please try again.';
       errEl.classList.remove('d-none');
     }
-  } catch(e) {
-    errEl.textContent = 'Network error — please try again.';
-    errEl.classList.remove('d-none');
+    spin.classList.add('d-none');
+    btn.disabled = false;
   }
-  spin.classList.add('d-none');
-  btn.disabled = false;
-}
 
-// ── Shared: render results table ─────────────────────────────
-function renderResults(txns, mode) {
-  const prefix   = mode === 'bank' ? 'b' : '';
-  const tbody    = document.getElementById(prefix + 'TxnBody');
-  const empty    = document.getElementById(prefix ? 'bEmptyResults' : 'emptyResults');
-  const selCount = document.getElementById(prefix ? 'bSelectedCount' : 'selectedCount');
-  const btnImp   = document.getElementById(prefix ? 'bBtnImport' : 'btnImport');
-  const selAll   = document.getElementById(prefix ? 'bSelectAll' : 'selectAll');
+  document.getElementById('btnDisconnect')?.addEventListener('click', async () => {
+    await fetch('/email-import/disconnect', {method: 'POST'});
+    location.reload();
+  });
 
-  tbody.innerHTML = '';
-  selCount.textContent = '0 selected';
-  btnImp.disabled = true;
-  selAll.checked = false;
+  // ── Email: Scan ──────────────────────────────────────────────
+  async function scanEmails() {
+    const days = document.getElementById('scanDays').value;
+    const errEl = document.getElementById('scanError');
+    const infoEl = document.getElementById('scanInfo');
+    const spin = document.getElementById('scanSpinner');
+    const btn = document.getElementById('btnScan');
+    const card = document.getElementById('card-results');
 
-  if (!txns.length) { empty.classList.remove('d-none'); return; }
-  empty.classList.add('d-none');
+    errEl.classList.add('d-none');
+    infoEl.textContent = 'Scanning your inbox… this may take a moment.';
+    infoEl.classList.remove('d-none');
+    spin.classList.remove('d-none');
+    btn.disabled = true;
+    card.classList.add('d-none');
 
-  txns.forEach((t, i) => {
-    const isIncome = t.type === 'income';
-    const typeBadge = isIncome
-      ? `<span class="type-badge badge-income"><i class="bi bi-arrow-down-circle-fill"></i> Income</span>`
-      : `<span class="type-badge badge-expense"><i class="bi bi-arrow-up-circle-fill"></i> Expense</span>`;
-    const row = document.createElement('tr');
-    row.innerHTML = `
+    try {
+      const res = await fetch('/email-import/scan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({days: parseInt(days)})
+      });
+      const data = await res.json();
+      infoEl.classList.add('d-none');
+      if (data.success) {
+        parsedTransactions = data.transactions;
+        renderResults(parsedTransactions, 'email');
+        card.classList.remove('d-none');
+      } else {
+        errEl.textContent = data.message;
+        errEl.classList.remove('d-none');
+      }
+    } catch (e) {
+      infoEl.classList.add('d-none');
+      errEl.textContent = 'Network error during scan.';
+      errEl.classList.remove('d-none');
+    }
+    spin.classList.add('d-none');
+    btn.disabled = false;
+  }
+
+  // ── Bank: File upload & drag-drop ────────────────────────────
+  function onFileSelected() {
+    const f = document.getElementById('stmtFile').files[0];
+    const chosen = document.getElementById('fileChosen');
+    if (f) {
+      const ext = f.name.split('.').pop().toLowerCase();
+      const icon = ext === 'zip' ? '🗜️' : '📄';
+      const label = ext === 'zip' ? ' (ZIP archive — statements will be extracted automatically)' : '';
+      chosen.innerHTML = icon + ' <strong>' + f.name + '</strong><span style="color:var(--text-muted);font-size:0.82rem;">' + label + '</span>';
+      chosen.classList.remove('d-none');
+      document.getElementById('btnParse').disabled = false;
+    }
+  }
+
+  const zone = document.getElementById('uploadZone');
+  if (zone) {
+    zone.addEventListener('dragover', e => {e.preventDefault(); zone.classList.add('drag-over');});
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      const dt = e.dataTransfer;
+      if (dt.files.length) {
+        document.getElementById('stmtFile').files = dt.files;
+        onFileSelected();
+      }
+    });
+  }
+
+  // ── Bank: Parse ──────────────────────────────────────────────
+  function togglePwVisibility() {
+    const inp = document.getElementById('stmtPassword');
+    const icon = document.getElementById('pwEyeIcon');
+    if (inp.type === 'password') {inp.type = 'text'; icon.className = 'bi bi-eye-slash';}
+    else {inp.type = 'password'; icon.className = 'bi bi-eye';}
+  }
+
+  async function parseStatement() {
+    const f = document.getElementById('stmtFile').files[0];
+    if (!f) return;
+    const errEl = document.getElementById('parseError');
+    const spin = document.getElementById('parseSpinner');
+    const btn = document.getElementById('btnParse');
+    const card = document.getElementById('card-bank-results');
+    const pwRow = document.getElementById('passwordRow');
+    const pwInput = document.getElementById('stmtPassword');
+
+    errEl.classList.add('d-none');
+    spin.classList.remove('d-none');
+    btn.disabled = true;
+    card.classList.add('d-none');
+
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const pw = pwInput ? pwInput.value.trim() : '';
+      if (pw) fd.append('password', pw);
+
+      const res = await fetch('/bank-statement/upload', {method: 'POST', body: fd});
+      const data = await res.json();
+
+      if (data.success) {
+        bankTransactions = data.transactions;
+        renderResults(bankTransactions, 'bank');
+        card.classList.remove('d-none');
+        pwRow.classList.add('d-none');
+        const srcNote = document.getElementById('bSourceNote');
+        if (srcNote && data.source) {
+          srcNote.textContent = 'Parsed from: ' + data.source;
+          srcNote.classList.remove('d-none');
+        }
+        card.scrollIntoView({behavior: 'smooth', block: 'start'});
+      } else {
+        if (data.needs_password) {
+          pwRow.classList.remove('d-none');
+          pwInput.focus();
+          errEl.innerHTML = '<i class="bi bi-lock me-1"></i>' + data.message;
+        } else {
+          errEl.textContent = data.message;
+        }
+        errEl.classList.remove('d-none');
+      }
+    } catch (e) {
+      errEl.textContent = 'Network error — please try again.';
+      errEl.classList.remove('d-none');
+    }
+    spin.classList.add('d-none');
+    btn.disabled = false;
+  }
+
+  // ── Shared: render results table ─────────────────────────────
+  function renderResults(txns, mode) {
+    const prefix = mode === 'bank' ? 'b' : '';
+    const tbody = document.getElementById(prefix + 'TxnBody');
+    const empty = document.getElementById(prefix ? 'bEmptyResults' : 'emptyResults');
+    const selCount = document.getElementById(prefix ? 'bSelectedCount' : 'selectedCount');
+    const btnImp = document.getElementById(prefix ? 'bBtnImport' : 'btnImport');
+    const selAll = document.getElementById(prefix ? 'bSelectAll' : 'selectAll');
+
+    tbody.innerHTML = '';
+    selCount.textContent = '0 selected';
+    btnImp.disabled = true;
+    selAll.checked = false;
+
+    if (!txns.length) {empty.classList.remove('d-none'); return;}
+    empty.classList.add('d-none');
+
+    txns.forEach((t, i) => {
+      const isIncome = t.type === 'income';
+      const typeBadge = isIncome
+        ? `<span class="type-badge badge-income"><i class="bi bi-arrow-down-circle-fill"></i> Income</span>`
+        : `<span class="type-badge badge-expense"><i class="bi bi-arrow-up-circle-fill"></i> Expense</span>`;
+      const row = document.createElement('tr');
+      row.innerHTML = `
       <td><input class="form-check-input txn-check-${mode}" type="checkbox" data-idx="${i}" onchange="updateCount('${mode}')"></td>
       <td style="white-space:nowrap;">${t.date}</td>
       <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(t.description)}">${escHtml(t.description)}</td>
       <td>${typeBadge}</td>
       <td class="fw-bold" style="white-space:nowrap;">₹${parseFloat(t.amount).toFixed(2)}</td>
     `;
-    tbody.appendChild(row);
-  });
-}
-
-function escHtml(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function toggleAll(cb, mode) {
-  document.querySelectorAll(`.txn-check-${mode}`).forEach(c => c.checked = cb.checked);
-  updateCount(mode);
-}
-
-function updateCount(mode) {
-  const checked = document.querySelectorAll(`.txn-check-${mode}:checked`).length;
-  const all     = document.querySelectorAll(`.txn-check-${mode}`).length;
-  const prefix  = mode === 'bank' ? 'b' : '';
-  document.getElementById(prefix ? 'bSelectedCount' : 'selectedCount').textContent = `${checked} selected`;
-  document.getElementById(prefix ? 'bBtnImport' : 'btnImport').disabled = checked === 0;
-  document.getElementById(prefix ? 'bSelectAll' : 'selectAll').checked = checked === all && all > 0;
-}
-
-// ── Shared: import selected ──────────────────────────────────
-async function importSelected(mode) {
-  const prefix    = mode === 'bank' ? 'b' : '';
-  const successEl = document.getElementById(prefix ? 'bImportSuccess' : 'importSuccess');
-  const errEl     = document.getElementById(prefix ? 'bImportError' : 'importError');
-  const spin      = document.getElementById(prefix ? 'bImportSpinner' : 'importSpinner');
-  const btn       = document.getElementById(prefix ? 'bBtnImport' : 'btnImport');
-  const txnList   = mode === 'bank' ? bankTransactions : parsedTransactions;
-  const endpoint  = mode === 'bank' ? '/bank-statement/import' : '/email-import/import';
-
-  successEl.classList.add('d-none');
-  errEl.classList.add('d-none');
-  spin.classList.remove('d-none');
-  btn.disabled = true;
-
-  const selected = [];
-  document.querySelectorAll(`.txn-check-${mode}:checked`).forEach(cb => {
-    selected.push(txnList[parseInt(cb.dataset.idx)]);
-  });
-
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({transactions: selected})
+      tbody.appendChild(row);
     });
-    const data = await res.json();
-    if (data.success) {
-      const skippedNote = data.skipped > 0 ? ` (${data.skipped} duplicate${data.skipped !== 1 ? 's' : ''} skipped)` : '';
-      successEl.innerHTML = `
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function toggleAll(cb, mode) {
+    document.querySelectorAll(`.txn-check-${mode}`).forEach(c => c.checked = cb.checked);
+    updateCount(mode);
+  }
+
+  function updateCount(mode) {
+    const checked = document.querySelectorAll(`.txn-check-${mode}:checked`).length;
+    const all = document.querySelectorAll(`.txn-check-${mode}`).length;
+    const prefix = mode === 'bank' ? 'b' : '';
+    document.getElementById(prefix ? 'bSelectedCount' : 'selectedCount').textContent = `${checked} selected`;
+    document.getElementById(prefix ? 'bBtnImport' : 'btnImport').disabled = checked === 0;
+    document.getElementById(prefix ? 'bSelectAll' : 'selectAll').checked = checked === all && all > 0;
+  }
+
+  // ── Shared: import selected ──────────────────────────────────
+  async function importSelected(mode) {
+    const prefix = mode === 'bank' ? 'b' : '';
+    const successEl = document.getElementById(prefix ? 'bImportSuccess' : 'importSuccess');
+    const errEl = document.getElementById(prefix ? 'bImportError' : 'importError');
+    const spin = document.getElementById(prefix ? 'bImportSpinner' : 'importSpinner');
+    const btn = document.getElementById(prefix ? 'bBtnImport' : 'btnImport');
+    const txnList = mode === 'bank' ? bankTransactions : parsedTransactions;
+    const endpoint = mode === 'bank' ? '/bank-statement/import' : '/email-import/import';
+
+    successEl.classList.add('d-none');
+    errEl.classList.add('d-none');
+    spin.classList.remove('d-none');
+    btn.disabled = true;
+
+    const selected = [];
+    document.querySelectorAll(`.txn-check-${mode}:checked`).forEach(cb => {
+      selected.push(txnList[parseInt(cb.dataset.idx)]);
+    });
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({transactions: selected})
+      });
+      const data = await res.json();
+      if (data.success) {
+        const skippedNote = data.skipped > 0 ? ` (${data.skipped} duplicate${data.skipped !== 1 ? 's' : ''} skipped)` : '';
+        successEl.innerHTML = `
         <i class="bi bi-check-circle-fill me-2"></i>
         <strong>${data.imported} transaction${data.imported !== 1 ? 's' : ''} imported${skippedNote}!</strong><br>
         <span style="font-size:0.9rem;">
@@ -795,26 +976,26 @@ async function importSelected(mode) {
             Transactions from past months appear on the Income/Expense pages and in Analysis charts.
           </span>
         </span>`;
-      successEl.classList.remove('d-none');
-      document.querySelectorAll(`.txn-check-${mode}:checked`).forEach(cb => cb.closest('tr').remove());
-      updateCount(mode);
-    } else {
-      errEl.textContent = data.message || 'Import failed.';
+        successEl.classList.remove('d-none');
+        document.querySelectorAll(`.txn-check-${mode}:checked`).forEach(cb => cb.closest('tr').remove());
+        updateCount(mode);
+      } else {
+        errEl.textContent = data.message || 'Import failed.';
+        errEl.classList.remove('d-none');
+      }
+    } catch (e) {
+      errEl.textContent = 'Network error during import.';
       errEl.classList.remove('d-none');
     }
-  } catch(e) {
-    errEl.textContent = 'Network error during import.';
-    errEl.classList.remove('d-none');
+    spin.classList.add('d-none');
+    btn.disabled = false;
   }
-  spin.classList.add('d-none');
-  btn.disabled = false;
-}
 
-// ── Email: Enter key shortcut ─────────────────────────────────
-['imapEmail','imapPassword','imapHost','imapPort'].forEach(id => {
-  document.getElementById(id)?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') connectEmail();
+  // ── Email: Enter key shortcut ─────────────────────────────────
+  ['imapEmail', 'imapPassword', 'imapHost', 'imapPort'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') connectEmail();
+    });
   });
-});
 </script>
 {% endblock %}

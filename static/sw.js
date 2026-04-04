@@ -1,5 +1,5 @@
 const CACHE_VERSION = 'money-mate-v4';
-const STATIC_CACHE  = CACHE_VERSION + '-static';
+const STATIC_CACHE = CACHE_VERSION + '-static';
 const DYNAMIC_CACHE = CACHE_VERSION + '-dynamic';
 
 const STATIC_ASSETS = [

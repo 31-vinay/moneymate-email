@@ -23,11 +23,11 @@
         <div class="d-flex gap-1 align-items-center">
           <span class="badge" style="background:rgba(255,255,255,0.25);font-size:0.7rem;">#{{ goal.priority }}</span>
           {% if goal.progress_percentage >= 100 %}
-            <span class="badge" style="background:rgba(255,255,255,0.25);">🎉 Done!</span>
+          <span class="badge" style="background:rgba(255,255,255,0.25);">🎉 Done!</span>
           {% elif goal.progress_percentage >= 75 %}
-            <span class="badge" style="background:rgba(255,255,255,0.25);">Almost!</span>
+          <span class="badge" style="background:rgba(255,255,255,0.25);">Almost!</span>
           {% else %}
-            <span class="badge" style="background:rgba(255,255,255,0.2);">In Progress</span>
+          <span class="badge" style="background:rgba(255,255,255,0.2);">In Progress</span>
           {% endif %}
         </div>
       </div>
@@ -37,7 +37,8 @@
         <div class="mb-3">
           <div class="d-flex justify-content-between mb-1" style="font-size:0.85rem;">
             <span class="text-muted">Progress</span>
-            <span class="fw-700" style="color:var(--brand-primary);">{{ "%.1f"|format(goal.progress_percentage) }}%</span>
+            <span class="fw-700" style="color:var(--brand-primary);">{{ "%.1f"|format(goal.progress_percentage)
+              }}%</span>
           </div>
           <div class="progress" style="height:14px;">
             <div class="progress-bar bg-success" style="width:{{ goal.progress_percentage }}%;"></div>
@@ -52,20 +53,24 @@
         <div class="row g-2 mb-3">
           <div class="col-6">
             <div class="p-2 rounded text-center" style="background:rgba(0, 128, 128,0.07);">
-              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Monthly</div>
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Monthly
+              </div>
               <div class="fw-700" style="font-size:1rem;">₹{{ "%.0f"|format(goal.monthly_savings) }}</div>
             </div>
           </div>
           <div class="col-6">
             <div class="p-2 rounded text-center" style="background:rgba(243,156,18,0.08);">
-              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Remaining</div>
-              <div class="fw-700" style="font-size:1rem;color:#f39c12;">₹{{ "%.0f"|format(goal.remaining_amount) }}</div>
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Remaining
+              </div>
+              <div class="fw-700" style="font-size:1rem;color:#f39c12;">₹{{ "%.0f"|format(goal.remaining_amount) }}
+              </div>
             </div>
           </div>
         </div>
 
         {% if goal.monthly_savings > 0 %}
-        <div class="p-2 rounded mb-3 d-flex align-items-center gap-2" style="background:rgba(0,184,148,0.07);font-size:0.85rem;">
+        <div class="p-2 rounded mb-3 d-flex align-items-center gap-2"
+          style="background:rgba(0,184,148,0.07);font-size:0.85rem;">
           <i class="bi bi-clock" style="color:#00b894;"></i>
           <span>Est. <strong>{{ "%.1f"|format(goal.estimated_months) }} months</strong> to go</span>
         </div>
@@ -84,9 +89,8 @@
           <a href="{{ url_for('edit_goal', id=goal.id) }}" class="btn btn-outline-primary">
             <i class="bi bi-pencil-square"></i>
           </a>
-          <a href="{{ url_for('delete_goal', id=goal.id) }}"
-             class="btn btn-danger"
-             onclick="return confirm('Delete this goal?')">
+          <a href="{{ url_for('delete_goal', id=goal.id) }}" class="btn btn-danger"
+            onclick="return confirm('Delete this goal?')">
             <i class="bi bi-trash"></i>
           </a>
         </div>
