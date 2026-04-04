@@ -189,15 +189,52 @@ let loginPin = '';
 let currentEmail = '';
 let currentUsername = '';
 
+const LS_EMAIL_KEY = 'mm_saved_email';
+
+// ── Auto-advance if we have a saved email ──────────────────────
 (function () {
   {% if show_mpin is defined and show_mpin %}
+    /* server-side prefill after a failed MPIN attempt */
     const e = "{{ prefill_email or '' }}";
-    if (e) showMpinStep(e, e);
-  {% elif prefill_email is defined and prefill_email and show_mpin is defined and not show_mpin %}
+    if (e) { localStorage.setItem(LS_EMAIL_KEY, e); showMpinStep(e, e); }
+  {% elif prefill_email is defined and prefill_email %}
     const e = "{{ prefill_email or '' }}";
-    if (e) showPasswordStep(e, e);
+    if (e) { localStorage.setItem(LS_EMAIL_KEY, e); showPasswordStep(e, e); }
+  {% else %}
+    /* check localStorage */
+    const saved = localStorage.getItem(LS_EMAIL_KEY);
+    if (saved) {
+      document.getElementById('emailInput').value = saved;
+      autoAdvance(saved);
+    }
   {% endif %}
 })();
+
+function autoAdvance(email) {
+  document.getElementById('continueBtnText').style.display = 'none';
+  document.getElementById('continueBtnSpinner').style.display = 'inline';
+  document.getElementById('continueBtn').disabled = true;
+  fetch('/check-mpin-status?email=' + encodeURIComponent(email))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.exists) {
+        /* saved email no longer valid — clear it and show email step */
+        localStorage.removeItem(LS_EMAIL_KEY);
+        document.getElementById('continueBtnText').style.display = 'inline';
+        document.getElementById('continueBtnSpinner').style.display = 'none';
+        document.getElementById('continueBtn').disabled = false;
+      } else if (data.has_mpin) {
+        showMpinStep(email, data.username);
+      } else {
+        showPasswordStep(email, data.username);
+      }
+    })
+    .catch(() => {
+      document.getElementById('continueBtnText').style.display = 'inline';
+      document.getElementById('continueBtnSpinner').style.display = 'none';
+      document.getElementById('continueBtn').disabled = false;
+    });
+}
 
 function checkUser(e) {
   e.preventDefault();
@@ -216,8 +253,10 @@ function checkUser(e) {
         document.getElementById('continueBtnSpinner').style.display = 'none';
         document.getElementById('continueBtn').disabled = false;
       } else if (data.has_mpin) {
+        localStorage.setItem(LS_EMAIL_KEY, email);
         showMpinStep(email, data.username);
       } else {
+        localStorage.setItem(LS_EMAIL_KEY, email);
         showPasswordStep(email, data.username);
       }
     });
@@ -259,6 +298,8 @@ function switchToPassword() {
 }
 
 function goBackToEmail() {
+  localStorage.removeItem(LS_EMAIL_KEY);
+  document.getElementById('emailInput').value = '';
   document.getElementById('step-mpin').style.display = 'none';
   document.getElementById('step-password').style.display = 'none';
   document.getElementById('step-email').style.display = 'block';
