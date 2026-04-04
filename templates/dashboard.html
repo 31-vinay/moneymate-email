@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex align-items-start justify-content-between mb-4 reveal flex-wrap gap-3">
+<div class="d-flex align-items-start justify-content-between mb-4 reveal flex-wrap gap-3" style="position:relative;z-index:200;">
   <div>
     <h4 class="mb-0 fw-bold" style="color: var(--text-primary);">
       <i class="bi bi-hand-wave me-2" style="color: var(--brand-primary);"></i>Welcome back, <span style="color: var(--brand-primary);">{{ current_user.username }}</span>!

@@ -1500,12 +1500,25 @@ def add_income():
         db.session.commit()
         flash("Income added successfully!", "success")
         return redirect(url_for("dashboard"))
-    incomes = (
-        Income.query.filter_by(user_id=current_user.id)
-        .order_by(Income.date_received.desc())
-        .all()
-    )
-    return render_template("add_income.html", form=form, edit=False, incomes=incomes)
+    # Day filter
+    try:
+        inc_filter_days = int(request.args.get("days", 0))
+        if inc_filter_days <= 0:
+            inc_filter_days = None
+    except (ValueError, TypeError):
+        inc_filter_days = None
+
+    income_query = Income.query.filter_by(user_id=current_user.id)
+    if inc_filter_days:
+        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=inc_filter_days)
+        income_query = income_query.filter(Income.date_received >= since)
+        inc_filter_label = f"Last {inc_filter_days} day{'s' if inc_filter_days != 1 else ''}"
+    else:
+        inc_filter_label = "All Time"
+
+    incomes = income_query.order_by(Income.date_received.desc()).all()
+    return render_template("add_income.html", form=form, edit=False, incomes=incomes,
+                           inc_filter_days=inc_filter_days, inc_filter_label=inc_filter_label)
 
 
 @app.route("/edit_income/<int:id>", methods=["GET", "POST"])
@@ -1538,7 +1551,8 @@ def edit_income(id):
         .order_by(Income.date_received.desc())
         .all()
     )
-    return render_template("add_income.html", form=form, edit=True, incomes=incomes)
+    return render_template("add_income.html", form=form, edit=True, incomes=incomes,
+                           inc_filter_days=None, inc_filter_label="All Time")
 
 
 @app.route("/delete_income/<int:id>")
