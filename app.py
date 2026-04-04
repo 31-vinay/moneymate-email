@@ -33,6 +33,8 @@ import re
 import csv
 import pdfplumber
 import openpyxl
+import xlrd
+import msoffcrypto
 import ssl
 import matplotlib
 matplotlib.use('Agg')
@@ -2246,6 +2248,28 @@ def _rows_to_txns(rows, header_idx):
             txns.append(_make_txn(date_val, desc, abs(amount), t))
     return txns
 
+def _decrypt_office_file(file_bytes, password):
+    """Decrypt a password-protected .xls/.xlsx file using msoffcrypto.
+    Returns decrypted bytes, or raises an exception if decryption fails."""
+    enc_file = io.BytesIO(file_bytes)
+    dec_file = io.BytesIO()
+    office_file = msoffcrypto.OfficeFile(enc_file)
+    office_file.load_key(password=password)
+    office_file.decrypt(dec_file)
+    dec_file.seek(0)
+    return dec_file.read()
+
+
+def _is_encrypted_office(file_bytes):
+    """Return True if the file appears to be an encrypted Office file."""
+    try:
+        enc_file = io.BytesIO(file_bytes)
+        office_file = msoffcrypto.OfficeFile(enc_file)
+        return office_file.is_encrypted()
+    except Exception:
+        return False
+
+
 def parse_bank_statement_csv(content_bytes):
     text = content_bytes.decode("utf-8-sig", errors="replace")
     reader = csv.reader(io.StringIO(text))
@@ -2255,12 +2279,41 @@ def parse_bank_statement_csv(content_bytes):
             return _rows_to_txns(rows, i)
     return []
 
-def parse_bank_statement_excel(content_bytes):
+def parse_bank_statement_xlsx(content_bytes):
+    """Parse an .xlsx file using openpyxl."""
     wb = openpyxl.load_workbook(io.BytesIO(content_bytes), data_only=True)
     ws = wb.active
     rows = []
     for row in ws.iter_rows(values_only=True):
         cells = [str(c) if c is not None else "" for c in row]
+        if any(c.strip() for c in cells):
+            rows.append(cells)
+    for i, row in enumerate(rows):
+        if _detect_columns(row):
+            return _rows_to_txns(rows, i)
+    return []
+
+
+def parse_bank_statement_xls(content_bytes):
+    """Parse an .xls (legacy Excel 97-2003) file using xlrd."""
+    wb = xlrd.open_workbook(file_contents=content_bytes)
+    ws = wb.sheet_by_index(0)
+    rows = []
+    for rx in range(ws.nrows):
+        cells = []
+        for cx in range(ws.ncols):
+            cell = ws.cell(rx, cx)
+            if cell.ctype == xlrd.XL_CELL_DATE:
+                try:
+                    dt = xlrd.xldate_as_datetime(cell.value, wb.datemode)
+                    cells.append(dt.strftime("%d/%m/%Y"))
+                except Exception:
+                    cells.append(str(cell.value))
+            elif cell.ctype == xlrd.XL_CELL_NUMBER:
+                v = cell.value
+                cells.append(str(int(v)) if v == int(v) else str(v))
+            else:
+                cells.append(str(cell.value).strip())
         if any(c.strip() for c in cells):
             rows.append(cells)
     for i, row in enumerate(rows):
@@ -2329,12 +2382,23 @@ def parse_bank_statement_pdf(content_bytes):
             unique.append(t)
     return unique
 
-def parse_bank_statement(file_bytes, filename):
+def parse_bank_statement(file_bytes, filename, password=None):
     ext = filename.rsplit(".", 1)[-1].lower()
     if ext == "pdf":
         return parse_bank_statement_pdf(file_bytes)
     elif ext in ("xlsx", "xls"):
-        return parse_bank_statement_excel(file_bytes)
+        data = file_bytes
+        if password:
+            try:
+                data = _decrypt_office_file(file_bytes, password)
+            except Exception:
+                raise ValueError("Wrong password or unable to decrypt the file.")
+        elif _is_encrypted_office(file_bytes):
+            raise ValueError("This file is password-protected. Please enter the statement password.")
+        if ext == "xls":
+            return parse_bank_statement_xls(data)
+        else:
+            return parse_bank_statement_xlsx(data)
     elif ext == "csv":
         return parse_bank_statement_csv(file_bytes)
     return []
@@ -2465,7 +2529,9 @@ def bank_statement_upload():
         if len(file_bytes) > 20 * 1024 * 1024:
             return jsonify({"success": False, "message": "File too large (max 20 MB)."})
 
-        # ── Handle ZIP: extract the first parseable statement file inside ──
+        password = request.form.get("password", "").strip() or None
+
+        # ── Handle ZIP: extract all parseable statement files inside ──
         if ext == "zip":
             SUPPORTED = {"pdf", "xlsx", "xls", "csv"}
             try:
@@ -2480,18 +2546,26 @@ def bank_statement_upload():
                         return jsonify({"success": False, "message": "No supported statement file found inside the ZIP (expected PDF, Excel, or CSV)."})
                     all_txns = []
                     parsed_files = []
+                    needs_pw = False
                     for entry in entries:
                         inner_bytes = zf.read(entry)
                         inner_name  = entry.split("/")[-1]
                         try:
-                            txns = parse_bank_statement(inner_bytes, inner_name)
+                            txns = parse_bank_statement(inner_bytes, inner_name, password=password)
                             if txns:
                                 all_txns.extend(txns)
                                 parsed_files.append(inner_name)
+                        except ValueError as ve:
+                            if "password" in str(ve).lower():
+                                needs_pw = True
+                            continue
                         except Exception:
                             continue
                     if not all_txns:
-                        return jsonify({"success": False, "message": "No transactions could be detected in any file inside the ZIP."})
+                        if needs_pw:
+                            return jsonify({"success": False, "needs_password": True,
+                                            "message": "One or more files inside the ZIP are password-protected. Please enter the statement password."})
+                        return jsonify({"success": False, "message": "No transactions could be detected in any file inside the ZIP. Make sure it contains a standard bank statement."})
                     # Deduplicate by (date, amount, type)
                     seen = set()
                     unique = []
@@ -2510,7 +2584,13 @@ def bank_statement_upload():
                 return jsonify({"success": False, "message": "The uploaded file is not a valid ZIP archive."})
 
         # ── Direct file upload ──
-        txns = parse_bank_statement(file_bytes, filename)
+        try:
+            txns = parse_bank_statement(file_bytes, filename, password=password)
+        except ValueError as ve:
+            msg = str(ve)
+            if "password" in msg.lower():
+                return jsonify({"success": False, "needs_password": True, "message": msg})
+            return jsonify({"success": False, "message": msg})
         if not txns:
             return jsonify({"success": False, "message": "No transactions could be detected. Make sure the file is a standard bank statement with Date, Description, and Amount columns."})
         return jsonify({"success": True, "transactions": txns, "count": len(txns), "source": filename})

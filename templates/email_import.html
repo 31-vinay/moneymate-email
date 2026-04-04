@@ -409,6 +409,24 @@
           </div>
         </div>
 
+        <!-- Optional password row (shown automatically for encrypted files) -->
+        <div class="mt-3 d-none" id="passwordRow">
+          <label class="form-label fw-semibold" style="font-size:0.88rem;" for="stmtPassword">
+            <i class="bi bi-lock me-1"></i>Statement Password
+          </label>
+          <div class="input-group" style="max-width:340px;">
+            <input type="password" class="form-control" id="stmtPassword" placeholder="e.g. DDMMYYYY or Customer ID"
+                   style="border-radius:10px 0 0 10px;" autocomplete="off">
+            <button class="btn btn-outline-secondary" type="button" id="btnTogglePw"
+                    onclick="togglePwVisibility()" style="border-radius:0 10px 10px 0;">
+              <i class="bi bi-eye" id="pwEyeIcon"></i>
+            </button>
+          </div>
+          <div class="form-text mt-1" style="font-size:0.77rem;color:var(--text-secondary);">
+            Your password is never stored — it's used only to decrypt this file locally on the server.
+          </div>
+        </div>
+
         <div class="mt-4">
           <button class="btn btn-primary rounded-pill px-4" id="btnParse" onclick="parseStatement()" disabled>
             <i class="bi bi-cpu me-2"></i>Parse Statement
@@ -623,13 +641,22 @@ if (zone) {
 }
 
 // ── Bank: Parse ──────────────────────────────────────────────
+function togglePwVisibility() {
+  const inp  = document.getElementById('stmtPassword');
+  const icon = document.getElementById('pwEyeIcon');
+  if (inp.type === 'password') { inp.type = 'text';     icon.className = 'bi bi-eye-slash'; }
+  else                         { inp.type = 'password'; icon.className = 'bi bi-eye'; }
+}
+
 async function parseStatement() {
   const f = document.getElementById('stmtFile').files[0];
   if (!f) return;
-  const errEl  = document.getElementById('parseError');
-  const spin   = document.getElementById('parseSpinner');
-  const btn    = document.getElementById('btnParse');
-  const card   = document.getElementById('card-bank-results');
+  const errEl     = document.getElementById('parseError');
+  const spin      = document.getElementById('parseSpinner');
+  const btn       = document.getElementById('btnParse');
+  const card      = document.getElementById('card-bank-results');
+  const pwRow     = document.getElementById('passwordRow');
+  const pwInput   = document.getElementById('stmtPassword');
 
   errEl.classList.add('d-none');
   spin.classList.remove('d-none');
@@ -639,13 +666,17 @@ async function parseStatement() {
   try {
     const fd = new FormData();
     fd.append('file', f);
+    const pw = pwInput ? pwInput.value.trim() : '';
+    if (pw) fd.append('password', pw);
+
     const res  = await fetch('/bank-statement/upload', {method: 'POST', body: fd});
     const data = await res.json();
+
     if (data.success) {
       bankTransactions = data.transactions;
       renderResults(bankTransactions, 'bank');
       card.classList.remove('d-none');
-      // Show source info if available (e.g. which files were extracted from ZIP)
+      pwRow.classList.add('d-none');
       const srcNote = document.getElementById('bSourceNote');
       if (srcNote && data.source) {
         srcNote.textContent = 'Parsed from: ' + data.source;
@@ -653,7 +684,13 @@ async function parseStatement() {
       }
       card.scrollIntoView({behavior: 'smooth', block: 'start'});
     } else {
-      errEl.textContent = data.message;
+      if (data.needs_password) {
+        pwRow.classList.remove('d-none');
+        pwInput.focus();
+        errEl.innerHTML = '<i class="bi bi-lock me-1"></i>' + data.message;
+      } else {
+        errEl.textContent = data.message;
+      }
       errEl.classList.remove('d-none');
     }
   } catch(e) {
