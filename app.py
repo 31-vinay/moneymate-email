@@ -753,10 +753,10 @@ def run_monthly_reset(user):
     if last_reset is None:
         user.last_monthly_reset = now
         db.session.commit()
-        return False, 0
+        return False, 0, 0
 
     if now.year == last_reset.year and now.month == last_reset.month:
-        return False, 0
+        return False, 0, 0
 
     # ── Save the reset timestamp FIRST so a mid-way failure can't re-trigger the reset ──
     user.last_monthly_reset = now
