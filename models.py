@@ -1,8 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 db = SQLAlchemy()
+
+def _now():
+    return datetime.now(timezone.utc)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -22,8 +25,8 @@ class Income(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     source = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    date_received = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    date_received = db.Column(db.DateTime, default=_now)
+    created_at = db.Column(db.DateTime, default=_now)
     description = db.Column(db.String(200))
     is_recurring = db.Column(db.Boolean, default=False)
 
@@ -32,8 +35,8 @@ class Expense(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=_now)
+    created_at = db.Column(db.DateTime, default=_now)
     description = db.Column(db.String(200))
     is_essential = db.Column(db.Boolean, default=False)
     is_subscription = db.Column(db.Boolean, default=False)
@@ -50,7 +53,7 @@ class Goal(db.Model):
     monthly_savings = db.Column(db.Float, default=0.0)
     target_date = db.Column(db.DateTime, nullable=True)
     priority = db.Column(db.String(10), default='medium', nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_now)
 
     @property
     def remaining_amount(self):
@@ -72,5 +75,4 @@ class Goal(db.Model):
     def estimated_date(self):
         if self.estimated_months == float('inf'):
             return None
-        from datetime import timedelta
-        return datetime.utcnow() + timedelta(days=30 * self.estimated_months)
+        return datetime.now(timezone.utc) + timedelta(days=30 * self.estimated_months)
