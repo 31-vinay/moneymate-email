@@ -49,6 +49,7 @@ import msoffcrypto
 import ssl
 import socket
 import time
+import concurrent.futures
 import matplotlib
 
 matplotlib.use("Agg")
@@ -444,105 +445,101 @@ def _is_financial_email(subject, from_addr):
 
 
 def scan_imap_emails(host, port, email_addr, password, days=30):
-    # Per-operation socket timeout (seconds) — prevents any single IMAP
-    # call from hanging indefinitely.
-    _SOCKET_TIMEOUT = 12
-    # Maximum total wall-clock seconds for the entire scan.  Must stay well
-    # under Replit's proxy keep-alive limit (~28 s) so the HTTP response
-    # is returned before the connection is dropped.
-    _SCAN_BUDGET = 22
-    # Maximum number of emails to inspect even if time allows.
-    _EMAIL_CAP = 150
+    # 8-second cap on every individual socket operation.
+    _SOCKET_TIMEOUT = 8
+    # Internal time budget for the whole function — the outer route enforces
+    # its own hard deadline via concurrent.futures, so keep this generous
+    # enough that it only acts as a secondary safety net.
+    _SCAN_BUDGET = 17
+    # Cap emails inspected per scan.
+    _EMAIL_CAP = 100
 
     socket.setdefaulttimeout(_SOCKET_TIMEOUT)
     scan_start = time.monotonic()
 
-    ctx = ssl.create_default_context()
-    mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
-    mail.login(email_addr, password)
-    mail.select("INBOX")
+    try:
+        ctx = ssl.create_default_context()
+        mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
+        mail.login(email_addr, password)
+        mail.select("INBOX")
 
-    since_date = (
-        datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
-    ).strftime("%d-%b-%Y")
-    _, message_ids = mail.search(None, f"SINCE {since_date}")
-    msg_ids = message_ids[0].split()
-    # Most recent first, respect the cap
-    msg_ids = msg_ids[-_EMAIL_CAP:][::-1]
-
-    transactions = []
-    seen_ids = set()
-
-    for mid in msg_ids:
-        # Stop early if we are approaching the time budget
         if time.monotonic() - scan_start >= _SCAN_BUDGET:
-            break
-        try:
-            # ── Step 1: fetch only the headers (fast, small) ──────────
-            _, hdr_data = mail.fetch(mid, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])")
-            hdr_raw = hdr_data[0][1] if hdr_data and hdr_data[0] else b""
-            hdr_msg = email_lib.message_from_bytes(hdr_raw)
+            return []
 
-            subject = _decode_header_str(hdr_msg.get("Subject", ""))
-            from_addr = hdr_msg.get("From", "")
-            date_str = hdr_msg.get("Date", "")
-            msg_id = hdr_msg.get("Message-ID", mid.decode()).strip("<> ")
+        since_date = (
+            datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+        ).strftime("%d-%b-%Y")
+        _, message_ids = mail.search(None, f"SINCE {since_date}")
+        msg_ids = message_ids[0].split()
+        # Most recent first, respect the cap
+        msg_ids = msg_ids[-_EMAIL_CAP:][::-1]
 
-            if msg_id in seen_ids:
-                continue
-            seen_ids.add(msg_id)
+        transactions = []
+        seen_ids = set()
 
-            # Skip non-financial emails without downloading the body
-            if not _is_financial_email(subject, from_addr):
-                continue
-
-            # ── Step 2: only now fetch the full body ──────────────────
+        for mid in msg_ids:
             if time.monotonic() - scan_start >= _SCAN_BUDGET:
                 break
-            _, msg_data = mail.fetch(mid, "(RFC822)")
-            raw = msg_data[0][1]
-            msg = email_lib.message_from_bytes(raw)
+            try:
+                _, msg_data = mail.fetch(mid, "(RFC822)")
+                raw = msg_data[0][1]
+                msg = email_lib.message_from_bytes(raw)
 
-            body = _extract_text(msg)
-            amount = _parse_amount(subject + " " + body[:3000])
-            if not amount:
+                subject = _decode_header_str(msg.get("Subject", ""))
+                from_addr = msg.get("From", "")
+                date_str = msg.get("Date", "")
+                msg_id = msg.get("Message-ID", mid.decode()).strip("<> ")
+
+                if msg_id in seen_ids:
+                    continue
+                seen_ids.add(msg_id)
+
+                if not _is_financial_email(subject, from_addr):
+                    continue
+
+                body = _extract_text(msg)
+                amount = _parse_amount(subject + " " + body[:3000])
+                if not amount:
+                    continue
+
+                is_income = _is_income(subject, body)
+                main_cat, sub_cat = _guess_category(subject, body)
+                if is_income:
+                    main_cat, sub_cat = "Income", "Transfer/Other"
+
+                try:
+                    txn_date = parsedate_to_datetime(date_str).strftime("%Y-%m-%d")
+                except Exception:
+                    txn_date = (
+                        datetime.now(timezone.utc)
+                        .replace(tzinfo=None)
+                        .strftime("%Y-%m-%d")
+                    )
+
+                transactions.append(
+                    {
+                        "msg_id": msg_id,
+                        "subject": subject[:120],
+                        "from": from_addr[:100],
+                        "date": txn_date,
+                        "amount": amount,
+                        "type": "income" if is_income else "expense",
+                        "main_cat": main_cat,
+                        "sub_cat": sub_cat,
+                        "description": subject[:200],
+                    }
+                )
+            except Exception:
                 continue
 
-            is_income = _is_income(subject, body)
-            main_cat, sub_cat = _guess_category(subject, body)
-            if is_income:
-                main_cat, sub_cat = "Income", "Transfer/Other"
-
-            try:
-                txn_date = parsedate_to_datetime(date_str).strftime("%Y-%m-%d")
-            except Exception:
-                txn_date = (
-                    datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-                )
-
-            transactions.append(
-                {
-                    "msg_id": msg_id,
-                    "subject": subject[:120],
-                    "from": from_addr[:100],
-                    "date": txn_date,
-                    "amount": amount,
-                    "type": "income" if is_income else "expense",
-                    "main_cat": main_cat,
-                    "sub_cat": sub_cat,
-                    "description": subject[:200],
-                }
-            )
+        try:
+            mail.logout()
         except Exception:
-            continue
+            pass
 
-    try:
-        mail.logout()
-    except Exception:
-        pass
+        return transactions
     finally:
         socket.setdefaulttimeout(None)
-    return transactions
 
 
 # ─────────────────────────────────────────────────────────────
@@ -3647,13 +3644,33 @@ def email_import_scan():
             {"success": False, "message": "Not connected to any email account."}
         )
     days = int(request.get_json(force=True).get("days", 30))
+    # Run the IMAP scan in a worker thread so we can enforce a hard deadline.
+    # The Replit proxy closes connections that take longer than ~25 s, so we
+    # must respond well before that regardless of how many emails are found.
+    _ROUTE_TIMEOUT = 20  # seconds — hard ceiling for the HTTP response
     try:
-        transactions = scan_imap_emails(
-            cfg["host"], cfg["port"], cfg["email"], cfg["password"], days=days
-        )
-        return jsonify(
-            {"success": True, "transactions": transactions, "count": len(transactions)}
-        )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                scan_imap_emails,
+                cfg["host"],
+                cfg["port"],
+                cfg["email"],
+                cfg["password"],
+                days,
+            )
+            try:
+                transactions = future.result(timeout=_ROUTE_TIMEOUT)
+            except concurrent.futures.TimeoutError:
+                # Return whatever the thread has collected so far isn't
+                # accessible from here, so return an empty list with a note.
+                return jsonify(
+                    {
+                        "success": True,
+                        "transactions": [],
+                        "count": 0,
+                        "timed_out": True,
+                    }
+                )
     except imaplib.IMAP4.error as e:
         session.pop("imap_config", None)
         return jsonify(
@@ -3664,6 +3681,9 @@ def email_import_scan():
         )
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+    return jsonify(
+        {"success": True, "transactions": transactions, "count": len(transactions)}
+    )
 
 
 @app.route("/email-import/import", methods=["POST"])

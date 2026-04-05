@@ -776,9 +776,14 @@
       const data = await res.json();
       infoEl.classList.add('d-none');
       if (data.success) {
-        parsedTransactions = data.transactions;
-        renderResults(parsedTransactions, 'email');
-        card.classList.remove('d-none');
+        if (data.timed_out) {
+          errEl.textContent = 'Scan timed out — your inbox is very large. Try a shorter look-back window (e.g. Last 7 days) and scan again.';
+          errEl.classList.remove('d-none');
+        } else {
+          parsedTransactions = data.transactions;
+          renderResults(parsedTransactions, 'email');
+          card.classList.remove('d-none');
+        }
       } else {
         errEl.textContent = data.message;
         errEl.classList.remove('d-none');
