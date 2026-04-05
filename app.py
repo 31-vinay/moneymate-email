@@ -3294,7 +3294,9 @@ def _parse_email_transactions(msg_bytes):
     # ── Require at least one bank-alert signal ───────────────────
     # Must mention an account reference or UPI/GPay marker
     BANK_SIGNAL = re.compile(
-        r'\b(?:a/c|ac|acct|account|upi|gpay|google\s*pay|ref\s*no|'
+        r'\b(?:a/c|ac|acct|account|upi|gpay|google\s*pay|phonepe|phone\s*pe|'
+        r'paytm|bhim|amazon\s*pay|whatsapp\s*pay|mobikwik|airtel\s*pay|'
+        r'freecharge|jio\s*pay|cred|slice|ref\s*no|'
         r'transaction\s*id|txn|neft|imps|rtgs|balance)\b',
         re.IGNORECASE,
     )
@@ -3465,7 +3467,9 @@ def email_scan():
         SEARCH_KEYWORDS = [
             "credited", "debited", "transaction alert", "deposited",
             "withdrawn", "neft", "imps", "rtgs", "upi", "auto debit", "emi",
-            "gpay", "google pay", "payment alert", "account alert",
+            "gpay", "google pay", "phonepe", "paytm", "bhim", "amazon pay",
+            "whatsapp pay", "mobikwik", "airtel pay", "freecharge",
+            "payment alert", "account alert",
         ]
         for keyword in SEARCH_KEYWORDS:
             for criteria in [
