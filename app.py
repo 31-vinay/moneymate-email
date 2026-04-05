@@ -496,76 +496,94 @@ def _is_financial_email(subject, from_addr):
 
 
 def scan_imap_emails(host, port, email_addr, password, days=30):
-    # Per-operation socket timeout: each individual IMAP call will raise
-    # socket.timeout if it takes longer than this many seconds.
-    _SOCKET_TIMEOUT = 4
-    # Hard wall-clock budget for the ENTIRE function (seconds).  Budget is
-    # checked between EVERY IMAP step so long setup phases cannot exceed it.
-    _SCAN_BUDGET = 30
-    # Maximum emails to inspect in the loop.
-    _EMAIL_CAP = 60
+    """Scan inbox for financial transaction emails.
+
+    Two-phase IMAP fetch strategy to avoid downloading attachments:
+
+    Phase 1 — fetch only the header block for every email in the window.
+               Headers are tiny (~500 bytes each), so 100 emails takes
+               2-5 seconds regardless of attachment sizes.
+
+    Phase 2 — only for emails that pass _is_financial_email(): fetch the
+               first 8 KB of the raw message.  Transaction notification
+               emails are almost always < 8 KB total, so the amount is
+               captured.  A 5 MB PDF attachment is never downloaded.
+    """
+    _SOCKET_TIMEOUT = 10   # seconds; cap on any single IMAP recv() call
+    _SCAN_BUDGET    = 55   # total wall-clock seconds for the whole function
+    _EMAIL_CAP      = 100  # max emails to inspect in phase 1
 
     socket.setdefaulttimeout(_SOCKET_TIMEOUT)
-    scan_start = time.monotonic()
+    t0 = time.monotonic()
 
-    def _over_budget():
-        return (time.monotonic() - scan_start) >= _SCAN_BUDGET
+    def _over():
+        return (time.monotonic() - t0) >= _SCAN_BUDGET
 
     mail = None
     try:
-        if _over_budget():
+        # ── Connect ──────────────────────────────────────────────────────────
+        if _over():
             return []
         ctx = ssl.create_default_context()
         mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
 
-        if _over_budget():
+        if _over():
             return []
         mail.login(email_addr, password)
 
-        if _over_budget():
+        if _over():
             return []
         mail.select("INBOX")
 
-        if _over_budget():
+        if _over():
             return []
         since_date = (
             datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         ).strftime("%d-%b-%Y")
         _, message_ids = mail.search(None, f"SINCE {since_date}")
         msg_ids = message_ids[0].split()
-        # Most recent first, respect the cap
+        # Most-recent first, capped so we don't scan thousands of old emails
         msg_ids = msg_ids[-_EMAIL_CAP:][::-1]
 
         transactions = []
         seen_ids = set()
 
         for mid in msg_ids:
-            if _over_budget():
+            if _over():
                 break
             try:
-                _, msg_data = mail.fetch(mid, "(RFC822)")
-                raw = msg_data[0][1]
-                msg = email_lib.message_from_bytes(raw)
+                # ── Phase 1: headers only (~500 bytes, very fast) ─────────────
+                _, hd = mail.fetch(mid, "(BODY.PEEK[HEADER])")
+                hdr_raw = hd[0][1] if hd and hd[0] else b""
+                hdr = email_lib.message_from_bytes(hdr_raw)
 
-                subject = _decode_header_str(msg.get("Subject", ""))
-                from_addr = msg.get("From", "")
-                date_str = msg.get("Date", "")
-                msg_id = msg.get("Message-ID", mid.decode()).strip("<> ")
+                subject  = _decode_header_str(hdr.get("Subject", ""))
+                sender   = hdr.get("From", "")
+                date_str = hdr.get("Date", "")
+                msg_id   = hdr.get("Message-ID", mid.decode()).strip("<> ")
 
                 if msg_id in seen_ids:
                     continue
                 seen_ids.add(msg_id)
 
-                if not _is_financial_email(subject, from_addr):
+                # Skip non-financial emails without ever downloading the body
+                if not _is_financial_email(subject, sender):
                     continue
 
-                body = _extract_text(msg)
+                # ── Phase 2: first 8 KB only (skips multi-MB attachments) ─────
+                if _over():
+                    break
+                _, bd = mail.fetch(mid, "(BODY.PEEK[]<0.8192>)")
+                msg_raw = bd[0][1] if bd and bd[0] else b""
+                msg = email_lib.message_from_bytes(msg_raw)
+
+                body   = _extract_text(msg)
                 amount = _parse_amount(subject + " " + body[:3000])
                 if not amount:
                     continue
 
-                is_income = _is_income(subject, body)
-                main_cat, sub_cat = _guess_category(subject, body)
+                is_income          = _is_income(subject, body)
+                main_cat, sub_cat  = _guess_category(subject, body)
                 if is_income:
                     main_cat, sub_cat = "Income", "Transfer/Other"
 
@@ -580,14 +598,14 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
 
                 transactions.append(
                     {
-                        "msg_id": msg_id,
-                        "subject": subject[:120],
-                        "from": from_addr[:100],
-                        "date": txn_date,
-                        "amount": amount,
-                        "type": "income" if is_income else "expense",
-                        "main_cat": main_cat,
-                        "sub_cat": sub_cat,
+                        "msg_id":      msg_id,
+                        "subject":     subject[:120],
+                        "from":        sender[:100],
+                        "date":        txn_date,
+                        "amount":      amount,
+                        "type":        "income" if is_income else "expense",
+                        "main_cat":    main_cat,
+                        "sub_cat":     sub_cat,
                         "description": subject[:200],
                     }
                 )
