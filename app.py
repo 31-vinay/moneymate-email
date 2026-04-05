@@ -450,27 +450,38 @@ def _is_financial_email(subject, from_addr):
 
 
 def scan_imap_emails(host, port, email_addr, password, days=30):
-    # 8-second cap on every individual socket operation.
-    _SOCKET_TIMEOUT = 8
-    # Internal time budget for the whole function — the outer route enforces
-    # its own hard deadline via concurrent.futures, so keep this generous
-    # enough that it only acts as a secondary safety net.
-    _SCAN_BUDGET = 17
-    # Cap emails inspected per scan.
-    _EMAIL_CAP = 100
+    # Per-operation socket timeout: each individual IMAP call will raise
+    # socket.timeout if it takes longer than this many seconds.
+    _SOCKET_TIMEOUT = 4
+    # Hard wall-clock budget for the ENTIRE function (seconds).  Budget is
+    # checked between EVERY IMAP step so long setup phases cannot exceed it.
+    _SCAN_BUDGET = 30
+    # Maximum emails to inspect in the loop.
+    _EMAIL_CAP = 60
 
     socket.setdefaulttimeout(_SOCKET_TIMEOUT)
     scan_start = time.monotonic()
 
+    def _over_budget():
+        return (time.monotonic() - scan_start) >= _SCAN_BUDGET
+
+    mail = None
     try:
+        if _over_budget():
+            return []
         ctx = ssl.create_default_context()
         mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
+
+        if _over_budget():
+            return []
         mail.login(email_addr, password)
+
+        if _over_budget():
+            return []
         mail.select("INBOX")
 
-        if time.monotonic() - scan_start >= _SCAN_BUDGET:
+        if _over_budget():
             return []
-
         since_date = (
             datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         ).strftime("%d-%b-%Y")
@@ -483,7 +494,7 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
         seen_ids = set()
 
         for mid in msg_ids:
-            if time.monotonic() - scan_start >= _SCAN_BUDGET:
+            if _over_budget():
                 break
             try:
                 _, msg_data = mail.fetch(mid, "(RFC822)")
@@ -537,13 +548,13 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
             except Exception:
                 continue
 
-        try:
-            mail.logout()
-        except Exception:
-            pass
-
         return transactions
     finally:
+        if mail is not None:
+            try:
+                mail.logout()
+            except Exception:
+                pass
         socket.setdefaulttimeout(None)
 
 
@@ -3976,4 +3987,7 @@ def retro_categorize():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # use_reloader=False prevents the Werkzeug stat-reloader from restarting
+    # the process mid-scan, which would wipe the in-memory _scan_tasks dict
+    # and cause "Scan task not found" errors on the next poll.
+    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
