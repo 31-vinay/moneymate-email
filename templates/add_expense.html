@@ -172,9 +172,12 @@
       <div class="card-body p-0">
         {% if expenses %}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
+          <table class="table table-hover mb-0" id="expenseTable">
             <thead>
               <tr>
+                <th style="width:36px;">
+                  <input type="checkbox" id="expSelectAll" class="form-check-input" title="Select all">
+                </th>
                 <th>Category</th>
                 <th>Amount</th>
                 <th>Date</th>
@@ -186,6 +189,9 @@
               {% for exp in expenses %}
               <tr {% if exp.category=='Uncategorized'
                 %}style="background:rgba(253,203,110,0.08);border-left:3px solid #fdcb6e;" {% endif %}>
+                <td>
+                  <input type="checkbox" class="form-check-input exp-row-check" value="{{ exp.id }}">
+                </td>
                 <td style="font-size:0.88rem;">
                   {% if exp.category == 'Uncategorized' %}
                   <span class="badge badge-uncategorized" style="background:rgba(253,203,110,0.25);font-size:0.78rem;">
@@ -250,6 +256,74 @@
     </div>
   </div>
 
+</div>
+
+<!-- Bulk Action Bar (Expenses) -->
+<div id="expBulkBar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1050;
+  background:var(--card-bg,#fff);border:1.5px solid var(--border-color);border-radius:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:12px 20px;min-width:340px;max-width:90vw;">
+  <div class="d-flex align-items-center gap-3 flex-wrap justify-content-center">
+    <span id="expBulkCount" class="fw-semibold" style="font-size:0.95rem;color:var(--text-muted);"></span>
+    <button type="button" class="btn btn-sm btn-primary rounded-pill" id="expBulkEditBtn">
+      <i class="bi bi-pencil-square me-1"></i>Edit Category
+    </button>
+    <button type="button" class="btn btn-sm btn-danger rounded-pill" id="expBulkDeleteBtn">
+      <i class="bi bi-trash me-1"></i>Delete Selected
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="expBulkClear">
+      <i class="bi bi-x me-1"></i>Clear
+    </button>
+  </div>
+</div>
+
+<!-- Hidden Bulk Delete Form (Expenses) -->
+<form id="expBulkDeleteForm" method="POST" action="{{ url_for('bulk_delete_expenses') }}" style="display:none;">
+  <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() }}">
+  <input type="hidden" name="days" value="{{ exp_filter_days or '' }}">
+  <div id="expDeleteIds"></div>
+</form>
+
+<!-- Bulk Edit Modal (Expenses) -->
+<div class="modal fade" id="expBulkEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;border:1.5px solid var(--border-color);">
+      <div class="modal-header" style="border-bottom:1.5px solid var(--border-color);">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="expBulkEditForm" method="POST" action="{{ url_for('bulk_edit_expenses') }}">
+        <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() }}">
+        <input type="hidden" name="days" value="{{ exp_filter_days or '' }}">
+        <div id="expEditIds"></div>
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:0.9rem;">
+            Choose a new category for the <strong id="expEditCount"></strong> selected expense(s).
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Main Category</label>
+            <select name="main_category" id="bulkMainCat" class="form-select" required>
+              <option value="">-- Select Category --</option>
+              {% for main_cat in expense_categories.keys() %}
+              <option value="{{ main_cat }}">{{ main_cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3" id="bulkSubCatDiv" style="display:none;">
+            <label class="form-label fw-semibold">Sub Category</label>
+            <select name="sub_category" id="bulkSubCat" class="form-select" required>
+              <option value="">-- Select Sub Category --</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1.5px solid var(--border-color);">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-1"></i>Apply to Selected
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -355,6 +429,95 @@
     }
   });
   {% endif %}
+
+  // ── Multi-select logic ──
+  const expSelectAll = document.getElementById('expSelectAll');
+  const expBulkBar   = document.getElementById('expBulkBar');
+  const expBulkCount = document.getElementById('expBulkCount');
+
+  function getCheckedExpIds() {
+    return Array.from(document.querySelectorAll('.exp-row-check:checked')).map(cb => cb.value);
+  }
+
+  function updateExpBulkBar() {
+    const ids = getCheckedExpIds();
+    if (ids.length > 0) {
+      expBulkCount.textContent = ids.length + ' selected';
+      expBulkBar.style.display = 'block';
+    } else {
+      expBulkBar.style.display = 'none';
+    }
+    const total = document.querySelectorAll('.exp-row-check').length;
+    expSelectAll.indeterminate = ids.length > 0 && ids.length < total;
+    expSelectAll.checked = ids.length === total && total > 0;
+  }
+
+  expSelectAll.addEventListener('change', function () {
+    document.querySelectorAll('.exp-row-check').forEach(cb => cb.checked = this.checked);
+    updateExpBulkBar();
+  });
+
+  document.querySelectorAll('.exp-row-check').forEach(cb => {
+    cb.addEventListener('change', updateExpBulkBar);
+  });
+
+  document.getElementById('expBulkClear').addEventListener('click', function () {
+    document.querySelectorAll('.exp-row-check').forEach(cb => cb.checked = false);
+    expSelectAll.checked = false;
+    expSelectAll.indeterminate = false;
+    expBulkBar.style.display = 'none';
+  });
+
+  document.getElementById('expBulkDeleteBtn').addEventListener('click', function () {
+    const ids = getCheckedExpIds();
+    if (!ids.length) return;
+    if (!confirm('Delete ' + ids.length + ' selected expense(s)? This cannot be undone.')) return;
+    const container = document.getElementById('expDeleteIds');
+    container.innerHTML = '';
+    ids.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'ids'; inp.value = id;
+      container.appendChild(inp);
+    });
+    document.getElementById('expBulkDeleteForm').submit();
+  });
+
+  document.getElementById('expBulkEditBtn').addEventListener('click', function () {
+    const ids = getCheckedExpIds();
+    if (!ids.length) return;
+    document.getElementById('expEditCount').textContent = ids.length;
+    const container = document.getElementById('expEditIds');
+    container.innerHTML = '';
+    ids.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'ids'; inp.value = id;
+      container.appendChild(inp);
+    });
+    new bootstrap.Modal(document.getElementById('expBulkEditModal')).show();
+  });
+
+  // Bulk edit: load subcategories when main category changes
+  document.getElementById('bulkMainCat').addEventListener('change', function () {
+    const mainCat = this.value;
+    const subDiv = document.getElementById('bulkSubCatDiv');
+    const subSel = document.getElementById('bulkSubCat');
+    if (mainCat) {
+      fetch(`/get_subcategories/${mainCat}`)
+        .then(r => r.json())
+        .then(data => {
+          subSel.innerHTML = '<option value="">-- Select Sub Category --</option>';
+          (data.subcategories || []).forEach(cat => {
+            const o = document.createElement('option');
+            o.value = cat; o.textContent = cat;
+            subSel.appendChild(o);
+          });
+          subDiv.style.display = 'block';
+        });
+    } else {
+      subDiv.style.display = 'none';
+      subSel.innerHTML = '<option value="">-- Select Sub Category --</option>';
+    }
+  });
 </script>
 
 {% endblock %}

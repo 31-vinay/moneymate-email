@@ -2441,6 +2441,7 @@ def add_expense():
         expenses=expenses,
         exp_filter_days=exp_filter_days,
         exp_filter_label=exp_filter_label,
+        expense_categories=expense_categories,
     )
 
 
@@ -2551,6 +2552,79 @@ def delete_expense(id):
     db.session.commit()
     flash("Expense deleted.", "success")
     return redirect(url_for("dashboard"))
+
+
+@app.route("/bulk_delete_expenses", methods=["POST"])
+@login_required
+def bulk_delete_expenses():
+    ids_raw = request.form.getlist("ids")
+    ids = [int(i) for i in ids_raw if i.isdigit()]
+    if ids:
+        Expense.query.filter(
+            Expense.id.in_(ids),
+            Expense.user_id == current_user.id,
+        ).delete(synchronize_session=False)
+        db.session.commit()
+        flash(f"Deleted {len(ids)} expense{'s' if len(ids) != 1 else ''}.", "success")
+    days = request.form.get("days", "")
+    return redirect(url_for("add_expense", days=days) if days else url_for("add_expense"))
+
+
+@app.route("/bulk_edit_expenses", methods=["POST"])
+@login_required
+def bulk_edit_expenses():
+    ids_raw = request.form.getlist("ids")
+    ids = [int(i) for i in ids_raw if i.isdigit()]
+    new_main = request.form.get("main_category", "").strip()
+    new_sub = request.form.get("sub_category", "").strip()
+    if ids and new_main and new_sub:
+        is_essential = classify_essential(new_main, new_sub)
+        exps = Expense.query.filter(
+            Expense.id.in_(ids),
+            Expense.user_id == current_user.id,
+        ).all()
+        for exp in exps:
+            exp.category = new_sub
+            exp.is_essential = is_essential
+        db.session.commit()
+        flash(f"Updated category for {len(exps)} expense{'s' if len(exps) != 1 else ''}.", "success")
+    days = request.form.get("days", "")
+    return redirect(url_for("add_expense", days=days) if days else url_for("add_expense"))
+
+
+@app.route("/bulk_delete_income", methods=["POST"])
+@login_required
+def bulk_delete_income():
+    ids_raw = request.form.getlist("ids")
+    ids = [int(i) for i in ids_raw if i.isdigit()]
+    if ids:
+        Income.query.filter(
+            Income.id.in_(ids),
+            Income.user_id == current_user.id,
+        ).delete(synchronize_session=False)
+        db.session.commit()
+        flash(f"Deleted {len(ids)} income entr{'y' if len(ids) == 1 else 'ies'}.", "success")
+    days = request.form.get("days", "")
+    return redirect(url_for("add_income", days=days) if days else url_for("add_income"))
+
+
+@app.route("/bulk_edit_income", methods=["POST"])
+@login_required
+def bulk_edit_income():
+    ids_raw = request.form.getlist("ids")
+    ids = [int(i) for i in ids_raw if i.isdigit()]
+    new_source = request.form.get("source", "").strip()
+    if ids and new_source:
+        incs = Income.query.filter(
+            Income.id.in_(ids),
+            Income.user_id == current_user.id,
+        ).all()
+        for inc in incs:
+            inc.source = new_source
+        db.session.commit()
+        flash(f"Updated source for {len(incs)} income entr{'y' if len(incs) == 1 else 'ies'}.", "success")
+    days = request.form.get("days", "")
+    return redirect(url_for("add_income", days=days) if days else url_for("add_income"))
 
 
 @app.route("/subscriptions")
