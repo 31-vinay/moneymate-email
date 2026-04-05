@@ -53,6 +53,7 @@ import concurrent.futures
 import uuid
 import json
 import pathlib
+import threading
 import matplotlib
 
 matplotlib.use("Agg")
@@ -128,11 +129,37 @@ def _scan_delete(task_id: str) -> None:
 
 
 def _scan_and_save(task_id: str, host, port, email_addr, password, days) -> None:
-    """Run scan_imap_emails in a worker thread and write result to disk."""
+    """Run scan_imap_emails in a worker thread and write result to disk.
+
+    A daemon timer fires after 28 seconds and writes whatever has been
+    collected so far to disk, guaranteeing the polling loop always gets
+    a terminal response even if the IMAP server hangs indefinitely.
+    """
+    # Shared mutable state so the timer can read partial results
+    state = {"done": False, "transactions": []}
+
+    def _hard_deadline():
+        if not state["done"]:
+            _scan_write(
+                task_id,
+                {"status": "done", "transactions": state["transactions"]},
+            )
+
+    timer = threading.Timer(28, _hard_deadline)
+    timer.daemon = True
+    timer.start()
+
     try:
-        transactions = scan_imap_emails(host, port, email_addr, password, days)
+        transactions = scan_imap_emails(
+            host, port, email_addr, password, days,
+            progress_sink=state,  # scan writes partial results here
+        )
+        state["done"] = True
+        timer.cancel()
         _scan_write(task_id, {"status": "done", "transactions": transactions})
     except imaplib.IMAP4.error as e:
+        state["done"] = True
+        timer.cancel()
         _scan_write(
             task_id,
             {
@@ -140,7 +167,9 @@ def _scan_and_save(task_id: str, host, port, email_addr, password, days) -> None
                 "message": f"Email session expired — please reconnect. ({e})",
             },
         )
-    except Exception as e:
+    except BaseException as e:
+        state["done"] = True
+        timer.cancel()
         _scan_write(task_id, {"status": "error", "message": str(e)})
 
 
@@ -495,85 +524,122 @@ def _is_financial_email(subject, from_addr):
     return False
 
 
-def scan_imap_emails(host, port, email_addr, password, days=30):
+def _build_imap_search(since_date: str) -> str:
+    """Build an IMAP SEARCH string that pre-filters for financial emails.
+
+    Using server-side keyword filtering drastically reduces the number of
+    messages the client needs to inspect — from potentially thousands to
+    dozens — which is the single biggest speedup for large inboxes.
+
+    IMAP OR syntax is binary: OR crit1 crit2
+    Chained: OR crit1 OR crit2 OR crit3 crit4  →  c1 OR (c2 OR (c3 OR c4))
+    """
+    # Keywords that reliably appear in financial notification subject lines
+    subjects = [
+        "transaction", "payment", "purchase", "receipt", "invoice",
+        "debit", "credit", "charged", "transfer", "refund",
+        "deposit", "bill", "statement", "salary", "payroll",
+        "subscription", "order", "amount due", "auto-pay",
+    ]
+
+    def _or_chain(terms):
+        if len(terms) == 1:
+            return f'SUBJECT "{terms[0]}"'
+        return f'OR SUBJECT "{terms[0]}" {_or_chain(terms[1:])}'
+
+    return f'SINCE {since_date} {_or_chain(subjects)}'
+
+
+def scan_imap_emails(host, port, email_addr, password, days=30, progress_sink=None):
     """Scan inbox for financial transaction emails.
 
-    Two-phase IMAP fetch strategy to avoid downloading attachments:
-
-    Phase 1 — fetch only the header block for every email in the window.
-               Headers are tiny (~500 bytes each), so 100 emails takes
-               2-5 seconds regardless of attachment sizes.
-
-    Phase 2 — only for emails that pass _is_financial_email(): fetch the
-               first 8 KB of the raw message.  Transaction notification
-               emails are almost always < 8 KB total, so the amount is
-               captured.  A 5 MB PDF attachment is never downloaded.
+    Speed improvements over the previous version:
+      1. Server-side SEARCH pre-filters to financial subjects only, so the
+         server returns 10–50 IDs instead of thousands.
+      2. All headers are fetched in a single batch FETCH command (one network
+         round-trip) instead of one per email.
+      3. Body is capped at 8 KB — large attachments are never downloaded.
+      4. progress_sink lets the hard-deadline timer in _scan_and_save read
+         partial results if the function is still blocked when time runs out.
     """
-    _SOCKET_TIMEOUT = 10   # seconds; cap on any single IMAP recv() call
-    _SCAN_BUDGET    = 55   # total wall-clock seconds for the whole function
-    _EMAIL_CAP      = 100  # max emails to inspect in phase 1
+    _SOCKET_TIMEOUT = 8    # seconds per recv(); limits any one blocking call
+    _EMAIL_CAP      = 80   # max emails to process even after server filter
 
     socket.setdefaulttimeout(_SOCKET_TIMEOUT)
-    t0 = time.monotonic()
 
-    def _over():
-        return (time.monotonic() - t0) >= _SCAN_BUDGET
+    if progress_sink is None:
+        progress_sink = {}
 
     mail = None
     try:
-        # ── Connect ──────────────────────────────────────────────────────────
-        if _over():
-            return []
+        # ── Connect, login, select ────────────────────────────────────────────
         ctx = ssl.create_default_context()
         mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
-
-        if _over():
-            return []
         mail.login(email_addr, password)
-
-        if _over():
-            return []
         mail.select("INBOX")
 
-        if _over():
-            return []
+        # ── Server-side search: financial subjects + date filter ──────────────
         since_date = (
             datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         ).strftime("%d-%b-%Y")
-        _, message_ids = mail.search(None, f"SINCE {since_date}")
-        msg_ids = message_ids[0].split()
-        # Most-recent first, capped so we don't scan thousands of old emails
+
+        criteria = _build_imap_search(since_date)
+        try:
+            _, msg_data = mail.search(None, criteria)
+        except Exception:
+            # Fallback: simpler date-only search (some servers reject complex OR)
+            _, msg_data = mail.search(None, f"SINCE {since_date}")
+        msg_ids = msg_data[0].split()
+
+        if not msg_ids:
+            return []
+
+        # Most-recent first, capped
         msg_ids = msg_ids[-_EMAIL_CAP:][::-1]
 
-        transactions = []
-        seen_ids = set()
+        # ── Batch fetch all headers in ONE round-trip ─────────────────────────
+        id_set = b",".join(msg_ids).decode()
+        _, hd_batch = mail.fetch(
+            id_set,
+            "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])",
+        )
 
-        for mid in msg_ids:
-            if _over():
-                break
+        # Parse batch response — tuples are the per-message data frames
+        financial: list[tuple] = []   # (seq_bytes, subject, sender, date_str, msg_id)
+        seen_ids: set[str] = set()
+
+        for item in hd_batch:
+            if not isinstance(item, tuple):
+                continue
+            # item[0] looks like b'123 (BODY[HEADER.FIELDS ...] {size}'
+            # item[1] is the raw header bytes
             try:
-                # ── Phase 1: headers only (~500 bytes, very fast) ─────────────
-                _, hd = mail.fetch(mid, "(BODY.PEEK[HEADER])")
-                hdr_raw = hd[0][1] if hd and hd[0] else b""
-                hdr = email_lib.message_from_bytes(hdr_raw)
+                seq_bytes = item[0].split()[0]          # e.g. b'123'
+                hdr = email_lib.message_from_bytes(item[1])
 
                 subject  = _decode_header_str(hdr.get("Subject", ""))
                 sender   = hdr.get("From", "")
                 date_str = hdr.get("Date", "")
-                msg_id   = hdr.get("Message-ID", mid.decode()).strip("<> ")
+                msg_id   = hdr.get("Message-ID", seq_bytes.decode()).strip("<> ")
 
                 if msg_id in seen_ids:
                     continue
                 seen_ids.add(msg_id)
 
-                # Skip non-financial emails without ever downloading the body
+                # Local filter pass (server already filtered, but double-check)
                 if not _is_financial_email(subject, sender):
                     continue
 
-                # ── Phase 2: first 8 KB only (skips multi-MB attachments) ─────
-                if _over():
-                    break
-                _, bd = mail.fetch(mid, "(BODY.PEEK[]<0.8192>)")
+                financial.append((seq_bytes, subject, sender, date_str, msg_id))
+            except Exception:
+                continue
+
+        # ── Phase 2: fetch first 8 KB of body for each financial email ────────
+        transactions: list[dict] = []
+
+        for seq_bytes, subject, sender, date_str, msg_id in financial:
+            try:
+                _, bd = mail.fetch(seq_bytes, "(BODY.PEEK[]<0.8192>)")
                 msg_raw = bd[0][1] if bd and bd[0] else b""
                 msg = email_lib.message_from_bytes(msg_raw)
 
@@ -582,8 +648,8 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
                 if not amount:
                     continue
 
-                is_income          = _is_income(subject, body)
-                main_cat, sub_cat  = _guess_category(subject, body)
+                is_income         = _is_income(subject, body)
+                main_cat, sub_cat = _guess_category(subject, body)
                 if is_income:
                     main_cat, sub_cat = "Income", "Transfer/Other"
 
@@ -596,23 +662,27 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
                         .strftime("%Y-%m-%d")
                     )
 
-                transactions.append(
-                    {
-                        "msg_id":      msg_id,
-                        "subject":     subject[:120],
-                        "from":        sender[:100],
-                        "date":        txn_date,
-                        "amount":      amount,
-                        "type":        "income" if is_income else "expense",
-                        "main_cat":    main_cat,
-                        "sub_cat":     sub_cat,
-                        "description": subject[:200],
-                    }
-                )
+                txn = {
+                    "msg_id":      msg_id,
+                    "subject":     subject[:120],
+                    "from":        sender[:100],
+                    "date":        txn_date,
+                    "amount":      amount,
+                    "type":        "income" if is_income else "expense",
+                    "main_cat":    main_cat,
+                    "sub_cat":     sub_cat,
+                    "description": subject[:200],
+                }
+                transactions.append(txn)
+                # Keep progress_sink current so the hard-deadline timer can
+                # return partial results if we're still running when it fires
+                progress_sink["transactions"] = transactions[:]
+
             except Exception:
                 continue
 
         return transactions
+
     finally:
         if mail is not None:
             try:
