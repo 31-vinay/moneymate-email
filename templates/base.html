@@ -79,7 +79,7 @@
         <li><a class="nav-link {% if request.endpoint == 'analysis' %}active-nav{% endif %}"
             href="{{ url_for('analysis') }}"><i class="bi bi-bar-chart-line"></i> Analysis</a></li>
         <li><a class="nav-link {% if request.endpoint == 'email_import' %}active-nav{% endif %}"
-            href="{{ url_for('email_import') }}"><i class="bi bi-envelope-arrow-down"></i> Import</a></li>
+            href="{{ url_for('email_import') }}"><i class="bi bi-file-earmark-arrow-down"></i> Import</a></li>
         <li>
           <a class="nav-link {% if request.endpoint in ('settings','setup_mpin','change_mpin','change_password','change_email','request_account_info') %}active-nav{% endif %}"
             href="{{ url_for('settings') }}" title="Settings">
@@ -148,7 +148,7 @@
         </a>
         <a class="mobile-nav-item{% if request.endpoint == 'email_import' %} active-mobile-nav{% endif %}"
           href="{{ url_for('email_import') }}" onclick="closeMobileMenu()">
-          <i class="bi bi-envelope-arrow-down"></i> Import
+          <i class="bi bi-file-earmark-arrow-down"></i> Import
         </a>
         <a class="mobile-nav-item{% if request.endpoint == 'settings' %} active-mobile-nav{% endif %}"
           href="{{ url_for('settings') }}" onclick="closeMobileMenu()">
