@@ -3250,23 +3250,25 @@ def _decode_payload(msg):
 
 
 def _parse_email_transactions(msg_bytes):
+    """
+    Parse one raw email and return a LIST of all transactions found inside it.
+    Handles both single-transaction alerts and digest emails that bundle many
+    transactions (e.g. HDFC InstaAlert with 11 UPI txns in one mail).
+    """
     import email as email_lib
     from email.header import decode_header
     import re
 
     msg = email_lib.message_from_bytes(msg_bytes)
 
-    # ── Sender must look like a bank / official alert ────────────
+    # ── Sender must look like a bank / official alert ─────────────
     sender = (msg.get("From", "") or "").lower()
-    # Known Indian bank domains and generic alert patterns
     BANK_DOMAINS = (
-        # Named Indian banks
         "hdfcbank", "icicibank", "sbi", "axisbank", "kotak", "pnb",
         "canarabank", "yesbank", "indusind", "federalbank", "unionbank",
         "bankofbaroda", "idfcfirstbank", "rblbank", "bandhanbank",
         "csbbank", "dhanbank", "saraswatbank", "karurvsb", "cityunion",
         "tmb", "dcbbank", "southindian", "karnataka",
-        # Generic alert sender patterns used by banks
         "bank", "alerts", "noreply", "no-reply", "notify", "notification",
         "donotreply", "do-not-reply", "transaction", "infosms",
         "netbanking", "actalerts", "info", "update", "statement",
@@ -3274,30 +3276,27 @@ def _parse_email_transactions(msg_bytes):
     if not any(d in sender for d in BANK_DOMAINS):
         return []
 
-    # ── Decode subject ───────────────────────────────────────────
+    # ── Decode subject ────────────────────────────────────────────
     raw_subj = msg.get("Subject", "") or ""
-    decoded_parts = decode_header(raw_subj)
     subject = ""
-    for part, enc in decoded_parts:
+    for part, enc in decode_header(raw_subj):
         if isinstance(part, bytes):
             subject += part.decode(enc or "utf-8", errors="replace")
         else:
             subject += str(part)
 
-    # ── Decode date ──────────────────────────────────────────────
+    # ── Email-level date (fallback when per-txn date not found) ──
     raw_date = msg.get("Date", "") or ""
     try:
         from email.utils import parsedate_to_datetime
-        dt = parsedate_to_datetime(raw_date)
-        txn_date = dt.strftime("%Y-%m-%d")
+        email_date = parsedate_to_datetime(raw_date).strftime("%Y-%m-%d")
     except Exception:
-        txn_date = datetime.now().strftime("%Y-%m-%d")
+        email_date = datetime.now().strftime("%Y-%m-%d")
 
     body = _decode_payload(msg)
-    full_text = (subject + " " + body).lower()
+    full_text = subject + " " + body  # preserve original case for date parsing
 
-    # ── Require at least one bank-alert signal ───────────────────
-    # Must mention an account reference or UPI/GPay marker
+    # ── Require at least one bank-alert signal ────────────────────
     BANK_SIGNAL = re.compile(
         r'\b(?:a/c|ac|acct|account|upi|gpay|google\s*pay|phonepe|phone\s*pe|'
         r'paytm|bhim|amazon\s*pay|whatsapp\s*pay|mobikwik|airtel\s*pay|'
@@ -3308,109 +3307,117 @@ def _parse_email_transactions(msg_bytes):
     if not BANK_SIGNAL.search(full_text):
         return []
 
-    # ── Credit / Debit keyword sets ──────────────────────────────
-    CREDIT_KEYWORDS = re.compile(
-        r'\b(?:credited|credit|received|deposited|deposit|refunded|refund|'
-        r'cashback|cash\s*back|reversed|reversal|inward\s+transfer|'
-        r'neft\s+(?:credit|received)|imps\s+credit|rtgs\s+credit)\b',
-        re.IGNORECASE,
-    )
-    DEBIT_KEYWORDS = re.compile(
-        r'\b(?:debited|debit|payment|paid|purchase|spent|charged|withdrawn|'
-        r'withdrawal|auto[\s-]?debit|emi\s+(?:paid|debited|deducted)|deducted|'
-        r'neft\s+debit|imps\s+debit|rtgs\s+debit|upi\s+(?:payment|debit)|'
-        r'mandate\s+executed|standing\s+instruction)\b',
-        re.IGNORECASE,
-    )
-
-    has_credit = bool(CREDIT_KEYWORDS.search(full_text))
-    has_debit  = bool(DEBIT_KEYWORDS.search(full_text))
-
-    if not has_credit and not has_debit:
-        return []
-
-    # ── Amount extraction: priority-ordered, take FIRST match ────
-    # Bank emails follow: "debited with INR 500.00 ... Avl Bal: INR 12,345.67"
-    # We must pick the TRANSACTION amount, not the balance.
-    # High-priority patterns: amount immediately after the action verb or "of"
-    HIGH_PRIORITY = [
-        # "debited with INR 500" / "credited with Rs. 500"
+    # ── Patterns that identify the TRANSACTION amount ─────────────
+    # Each pattern captures group(1) = the numeric amount string.
+    # Ordered by confidence — we iterate ALL matches across the whole body.
+    TXN_AMOUNT_PATTERNS = [
         r'(?:debited|credited)\s+(?:with\s+)?(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-        # "debited by INR 500" / "credited by Rs. 500"
-        r'(?:debited|credited)\s+by\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-        # "INR 500 debited" / "Rs 500 credited"
-        r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)\s+(?:has\s+been\s+)?(?:debited|credited)',
-        # "payment of INR 500" / "transaction of Rs. 500"
-        r'(?:payment|transaction|transfer|purchase)\s+of\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-        # "amount INR 500" / "amount of Rs 500"
-        r'amount\s*(?:of\s*)?(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-        # "paid INR 500" / "received INR 500"
-        r'(?:paid|received|withdrawn|deposited|spent|deducted)\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-        # "for INR 500" (GPay alert: "a/c XX debited for INR 500")
-        r'(?:debited|credited)\s+for\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-        # subject line "A/c XX1234 debited INR 500"
+        r'(?:debited|credited)\s+(?:by|for)\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
         r'(?:debited|credited)\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)\s+(?:has\s+been\s+)?(?:debited|credited)',
+        r'(?:payment|transaction|transfer|purchase)\s+of\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        r'amount\s*(?:of\s*)?(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        r'(?:paid|received|withdrawn|deposited|spent|deducted)\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
     ]
 
-    amount = None
-    for pat in HIGH_PRIORITY:
-        m = re.search(pat, full_text, re.IGNORECASE)
-        if m:
+    # Pre-compute positions of balance phrases so we can skip them
+    BALANCE_PAT = re.compile(
+        r'(?:avail(?:able)?|avl|bal(?:ance)?|closing\s+bal|opening\s+bal)'
+        r'\s*(?:bal(?:ance)?|amt|amount)?\s*[:\-]?\s*(?:inr|rs\.?|₹)',
+        re.IGNORECASE,
+    )
+    balance_positions = [m.start() for m in BALANCE_PAT.finditer(full_text)]
+
+    def is_balance_amount(pos):
+        """Return True if 'pos' is within 80 chars of a balance phrase."""
+        return any(abs(pos - bp) < 80 for bp in balance_positions)
+
+    # ── Date parsing helpers ──────────────────────────────────────
+    DATE_PATS = [
+        (r'\b(\d{1,2})[-/](\w{3})[-/](\d{2,4})\b', '%d %b %Y'),  # 01-Apr-26
+        (r'\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b',  '%d %m %Y'),  # 01-04-2026
+        (r'\b(\d{4})[-/](\d{2})[-/](\d{2})\b',       '%Y %m %d'),  # 2026-04-01
+    ]
+
+    def extract_date_near(pos, window=300):
+        lo = max(0, pos - window)
+        hi = min(len(full_text), pos + window)
+        chunk = full_text[lo:hi]
+        for pat, fmt in DATE_PATS:
+            m = re.search(pat, chunk, re.IGNORECASE)
+            if m:
+                parts = list(m.groups())
+                # Expand 2-digit year
+                if len(parts[2]) == 2 if len(parts) == 3 and fmt == '%d %b %Y' else False:
+                    parts[2] = "20" + parts[2]
+                date_str = " ".join(parts)
+                # Handle 2-digit year in DD-Mon-YY
+                if fmt == '%d %b %Y' and len(m.group(3)) == 2:
+                    date_str = m.group(1) + " " + m.group(2) + " 20" + m.group(3)
+                try:
+                    return datetime.strptime(date_str, fmt).strftime("%Y-%m-%d")
+                except Exception:
+                    continue
+        return email_date  # fall back to email received date
+
+    def extract_type_near(pos, window=200):
+        lo = max(0, pos - window)
+        hi = min(len(full_text), pos + window)
+        chunk = full_text[lo:hi].lower()
+        credit_m = re.search(
+            r'\b(?:credited|credit|received|deposited|refunded|cashback|reversed)\b', chunk)
+        debit_m  = re.search(
+            r'\b(?:debited|debit|payment|paid|purchase|withdrawn|deducted|charged)\b', chunk)
+        if credit_m and not debit_m:
+            return "income"
+        if debit_m and not credit_m:
+            return "expense"
+        if credit_m and debit_m:
+            return "income" if credit_m.start() < debit_m.start() else "expense"
+        return "expense"  # safe default
+
+    # ── Extract every transaction amount across the whole email ──
+    found_txns   = []
+    seen_amounts = set()  # (rounded_pos, amount) to avoid double-counting
+
+    for pat in TXN_AMOUNT_PATTERNS:
+        for m in re.finditer(pat, full_text, re.IGNORECASE):
+            amt_pos = m.start()
+            if is_balance_amount(amt_pos):
+                continue
             try:
-                val = float(m.group(1).replace(",", ""))
-                if val > 0:
-                    amount = val
-                    break
+                amount = float(m.group(1).replace(",", ""))
             except Exception:
                 continue
-
-    # Fallback: first currency-prefixed number that is NOT preceded by
-    # balance/available/avl/bal keywords
-    if amount is None:
-        BALANCE_GUARD = re.compile(
-            r'(?:avail(?:able)?|avl|bal(?:ance)?|closing|opening)\s*(?:bal(?:ance)?|amt|amount)?\s*'
-            r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
-            re.IGNORECASE,
-        )
-        balance_positions = {m.start() for m in BALANCE_GUARD.finditer(full_text)}
-
-        for m in re.finditer(r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)', full_text, re.IGNORECASE):
-            # Skip if this match is part of a balance phrase
-            if any(abs(m.start() - bp) < 60 for bp in balance_positions):
+            if amount <= 0:
                 continue
-            try:
-                val = float(m.group(1).replace(",", ""))
-                if val > 0:
-                    amount = val
-                    break
-            except Exception:
+            # Bucket position to nearest 50 chars to avoid duplicates from
+            # overlapping patterns matching the exact same amount instance
+            bucket = (round(amt_pos / 50) * 50, amount)
+            if bucket in seen_amounts:
                 continue
+            seen_amounts.add(bucket)
 
-    if not amount:
-        return []
+            txn_date = extract_date_near(amt_pos)
+            txn_type = extract_type_near(amt_pos)
+            desc     = re.sub(r'\s+', ' ', subject.strip())[:200] or "Bank Transaction"
 
-    # ── Description from subject ─────────────────────────────────
-    desc = subject.strip() or "Bank Transaction"
-    desc = re.sub(r'\s+', ' ', desc)[:200]
+            found_txns.append({
+                "date":        txn_date,
+                "description": desc,
+                "amount":      round(amount, 2),
+                "type":        txn_type,
+            })
 
-    # ── Determine credit/debit type ──────────────────────────────
-    if has_credit and not has_debit:
-        txn_type = "income"
-    elif has_debit and not has_credit:
-        txn_type = "expense"
-    else:
-        credit_pos = CREDIT_KEYWORDS.search(full_text)
-        debit_pos  = DEBIT_KEYWORDS.search(full_text)
-        c_start    = credit_pos.start() if credit_pos else len(full_text)
-        d_start    = debit_pos.start()  if debit_pos  else len(full_text)
-        txn_type   = "income" if c_start < d_start else "expense"
+    # ── Deduplicate within this single email ─────────────────────
+    unique, seen = [], set()
+    for t in found_txns:
+        key = (t["date"], t["amount"], t["type"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(t)
 
-    return [{
-        "date":        txn_date,
-        "description": desc,
-        "amount":      round(amount, 2),
-        "type":        txn_type,
-    }]
+    return unique
 
 
 @app.route("/email/connect", methods=["POST"])
