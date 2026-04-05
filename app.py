@@ -3260,11 +3260,16 @@ def _parse_email_transactions(msg_bytes):
     sender = (msg.get("From", "") or "").lower()
     # Known Indian bank domains and generic alert patterns
     BANK_DOMAINS = (
+        # Named Indian banks
         "hdfcbank", "icicibank", "sbi", "axisbank", "kotak", "pnb",
         "canarabank", "yesbank", "indusind", "federalbank", "unionbank",
         "bankofbaroda", "idfcfirstbank", "rblbank", "bandhanbank",
-        "alerts", "noreply", "notify", "notification", "donotreply",
-        "transaction", "infosms", "netbanking", "actalerts",
+        "csbbank", "dhanbank", "saraswatbank", "karurvsb", "cityunion",
+        "tmb", "dcbbank", "southindian", "karnataka",
+        # Generic alert sender patterns used by banks
+        "bank", "alerts", "noreply", "no-reply", "notify", "notification",
+        "donotreply", "do-not-reply", "transaction", "infosms",
+        "netbanking", "actalerts", "info", "update", "statement",
     )
     if not any(d in sender for d in BANK_DOMAINS):
         return []
@@ -3462,27 +3467,35 @@ def email_scan():
         transactions = []
         seen_ids = set()
 
-        # Search by subject keywords that banks commonly use in transaction alerts
-        # Including GPay / UPI keywords that appear in bank notification subjects
-        SEARCH_KEYWORDS = [
+        # Build list of IMAP search criteria.
+        # We search SUBJECT for app/method names AND BODY for the core
+        # transaction verbs — this catches banks that send generic subjects.
+        SUBJECT_KEYWORDS = [
             "credited", "debited", "transaction alert", "deposited",
             "withdrawn", "neft", "imps", "rtgs", "upi", "auto debit", "emi",
             "gpay", "google pay", "phonepe", "paytm", "bhim", "amazon pay",
             "whatsapp pay", "mobikwik", "airtel pay", "freecharge",
-            "payment alert", "account alert",
+            "payment alert", "account alert", "bank alert",
         ]
-        for keyword in SEARCH_KEYWORDS:
-            for criteria in [
-                f'(SINCE "{since_date}" SUBJECT "{keyword}")',
-            ]:
+        # BODY searches: use only the most reliable, universal verbs so we
+        # don't flood with unrelated mail.
+        BODY_KEYWORDS = ["debited", "credited"]
+
+        all_criteria = (
+            [f'(SINCE "{since_date}" SUBJECT "{kw}")' for kw in SUBJECT_KEYWORDS]
+            + [f'(SINCE "{since_date}" BODY "{kw}")'  for kw in BODY_KEYWORDS]
+        )
+
+        def fetch_and_parse(criteria_list):
+            for criteria in criteria_list:
                 try:
                     M.select("INBOX", readonly=True)
                     status, data_ids = M.search(None, criteria)
                     if status != "OK":
                         continue
                     msg_ids = data_ids[0].split() if data_ids[0] else []
-                    # Limit to last 200 per keyword/criteria combination
-                    msg_ids = msg_ids[-200:]
+                    # Take the most recent 500 per criteria
+                    msg_ids = msg_ids[-500:]
                     for mid in msg_ids:
                         if mid in seen_ids:
                             continue
@@ -3501,12 +3514,15 @@ def email_scan():
                 except Exception:
                     continue
 
+        fetch_and_parse(all_criteria)
+
         M.logout()
 
-        # Deduplicate by (date, amount, type)
+        # Deduplicate: use (date, amount, type, description) so that two
+        # same-amount transactions on the same day are kept as separate entries.
         unique, seen_keys = [], set()
         for t in transactions:
-            key = (t["date"], t["amount"], t["type"])
+            key = (t["date"], t["amount"], t["type"], t["description"][:80])
             if key not in seen_keys:
                 seen_keys.add(key)
                 unique.append(t)
