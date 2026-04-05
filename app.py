@@ -51,6 +51,8 @@ import socket
 import time
 import concurrent.futures
 import uuid
+import json
+import pathlib
 import matplotlib
 
 matplotlib.use("Agg")
@@ -93,9 +95,53 @@ admin.add_view(AdminModelView(Income, db.session))
 admin.add_view(AdminModelView(Expense, db.session))
 admin.add_view(AdminModelView(Goal, db.session))
 
-# In-memory store for background email scan tasks.
-# Each entry: {task_id: {"future": Future, "started": float}}
-_scan_tasks: dict = {}
+# ── Persistent scan-task storage ────────────────────────────────────────────
+# Tasks are stored as JSON files in /tmp so they survive process restarts
+# (e.g. Replit checkpoint-triggered restarts that would wipe in-memory dicts).
+_SCAN_DIR = pathlib.Path("/tmp/mm_scans")
+_SCAN_DIR.mkdir(exist_ok=True)
+
+
+def _scan_path(task_id: str) -> pathlib.Path:
+    return _SCAN_DIR / f"{task_id}.json"
+
+
+def _scan_write(task_id: str, payload: dict) -> None:
+    _scan_path(task_id).write_text(json.dumps(payload))
+
+
+def _scan_read(task_id: str):
+    p = _scan_path(task_id)
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return None
+
+
+def _scan_delete(task_id: str) -> None:
+    try:
+        _scan_path(task_id).unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _scan_and_save(task_id: str, host, port, email_addr, password, days) -> None:
+    """Run scan_imap_emails in a worker thread and write result to disk."""
+    try:
+        transactions = scan_imap_emails(host, port, email_addr, password, days)
+        _scan_write(task_id, {"status": "done", "transactions": transactions})
+    except imaplib.IMAP4.error as e:
+        _scan_write(
+            task_id,
+            {
+                "status": "error",
+                "message": f"Email session expired — please reconnect. ({e})",
+            },
+        )
+    except Exception as e:
+        _scan_write(task_id, {"status": "error", "message": str(e)})
 
 
 @app.route("/create_admin")
@@ -3656,9 +3702,8 @@ def email_import_disconnect():
 def email_import_scan():
     """Start a background email scan and return a task_id immediately.
 
-    The client polls /email-import/scan/status/<task_id> until the scan
-    finishes.  This avoids blocking the HTTP connection for 20+ seconds,
-    which would be cut off by Replit's reverse-proxy timeout.
+    Results are written to a /tmp file so they survive process restarts.
+    The client polls /email-import/scan/status/<task_id> until done.
     """
     cfg = session.get("imap_config")
     if not cfg:
@@ -3667,59 +3712,55 @@ def email_import_scan():
         )
     days = int(request.get_json(force=True).get("days", 30))
     task_id = str(uuid.uuid4())
+    # Write initial state to disk before launching the thread so the status
+    # endpoint always finds the file even if checked immediately.
+    _scan_write(task_id, {"status": "pending", "started": time.time()})
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    future = executor.submit(
-        scan_imap_emails,
-        cfg["host"],
-        cfg["port"],
-        cfg["email"],
-        cfg["password"],
-        days,
-    )
+    executor.submit(_scan_and_save, task_id, cfg["host"], cfg["port"], cfg["email"], cfg["password"], days)
     executor.shutdown(wait=False)
-    _scan_tasks[task_id] = {"future": future, "started": time.monotonic()}
     return jsonify({"success": True, "task_id": task_id})
 
 
 @app.route("/email-import/scan/status/<task_id>", methods=["GET"])
 @login_required
 def email_import_scan_status(task_id):
-    """Poll for the result of a background email scan."""
-    task = _scan_tasks.get(task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Scan task not found."})
-
-    future = task["future"]
-    elapsed = time.monotonic() - task["started"]
-
-    if not future.done():
-        if elapsed > 60:
-            _scan_tasks.pop(task_id, None)
-            return jsonify({"success": True, "status": "timeout"})
-        return jsonify({"success": True, "status": "pending", "elapsed": int(elapsed)})
-
-    _scan_tasks.pop(task_id, None)
-    try:
-        transactions = future.result()
-        return jsonify(
-            {
-                "success": True,
-                "status": "done",
-                "transactions": transactions,
-                "count": len(transactions),
-            }
-        )
-    except imaplib.IMAP4.error as e:
-        session.pop("imap_config", None)
+    """Poll for the result of a background email scan (reads from disk)."""
+    data = _scan_read(task_id)
+    if data is None:
         return jsonify(
             {
                 "success": False,
-                "status": "error",
-                "message": f"Email session expired — please reconnect. ({e})",
+                "message": "Scan not found — please start a new scan.",
             }
         )
-    except Exception as e:
-        return jsonify({"success": False, "status": "error", "message": str(e)})
+
+    status = data.get("status")
+
+    if status == "pending":
+        elapsed = time.time() - data.get("started", time.time())
+        if elapsed > 90:
+            _scan_delete(task_id)
+            return jsonify({"success": True, "status": "timeout"})
+        return jsonify({"success": True, "status": "pending", "elapsed": int(elapsed)})
+
+    # Scan has finished (done or error) — clean up the file
+    _scan_delete(task_id)
+
+    if status == "error":
+        msg = data.get("message", "Scan failed.")
+        if "session expired" in msg.lower():
+            session.pop("imap_config", None)
+        return jsonify({"success": False, "status": "error", "message": msg})
+
+    transactions = data.get("transactions", [])
+    return jsonify(
+        {
+            "success": True,
+            "status": "done",
+            "transactions": transactions,
+            "count": len(transactions),
+        }
+    )
 
 
 @app.route("/email-import/import", methods=["POST"])
