@@ -382,7 +382,20 @@
           <p>Your credentials are only used for this session and are never stored in the database.</p>
         </div>
       </div>
-      <div class="ei-card-body">
+
+      <!-- Connected summary (shown after successful connection) -->
+      <div id="connectedSummary" class="d-none" style="padding: 18px 26px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <span class="verified-badge">
+          <i class="bi bi-check-circle-fill"></i> Connected
+        </span>
+        <span style="color:var(--text-secondary); font-size:0.88rem;">Your email account is linked for this session.</span>
+        <button class="btn btn-link ms-auto p-0" style="color:#e74c3c; font-weight:700; font-size:0.88rem; text-decoration:none;" onclick="disconnectEmail()">
+          <i class="bi bi-plug me-1"></i>Disconnect
+        </button>
+      </div>
+
+      <!-- Form body (hidden after connection) -->
+      <div class="ei-card-body" id="connectFormBody">
 
         <div class="security-note">
           <strong><i class="bi bi-shield-lock me-1"></i>Security note:</strong>
@@ -463,9 +476,6 @@
             <i class="bi bi-plug me-2"></i>Connect &amp; Verify
             <span class="spinner-border spinner-border-sm ms-2 d-none" id="connectSpinner"></span>
           </button>
-          <span class="verified-badge d-none" id="verifiedBadge">
-            <i class="bi bi-check-circle-fill"></i> Connected
-          </span>
         </div>
         <div id="connectError" class="alert alert-danger d-none mt-3"></div>
 
@@ -739,10 +749,29 @@
 
   function setConnected(ok) {
     emailConnected = ok;
+    // Step 1 card: swap between form and compact connected state
+    const formBody  = document.getElementById('connectFormBody');
+    const summary   = document.getElementById('connectedSummary');
+    if (ok) {
+      formBody.classList.add('d-none');
+      summary.classList.remove('d-none');
+      summary.style.display = 'flex';
+    } else {
+      formBody.classList.remove('d-none');
+      summary.classList.add('d-none');
+    }
+    // Step 2: unlock when connected
     const scanCard = document.getElementById('card-scan');
     scanCard.style.opacity = ok ? '1' : '0.45';
     scanCard.style.pointerEvents = ok ? '' : 'none';
-    document.getElementById('verifiedBadge').classList.toggle('d-none', !ok);
+  }
+
+  function disconnectEmail() {
+    setConnected(false);
+    // Clear scan results
+    document.getElementById('card-email-results').classList.add('d-none');
+    document.getElementById('connectError').classList.add('d-none');
+    emailTransactions = [];
   }
 
   async function connectEmail() {

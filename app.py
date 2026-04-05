@@ -3278,18 +3278,38 @@ def _parse_email_transactions(msg_bytes):
     body = _decode_payload(msg)
     full_text = (subject + " " + body).lower()
 
-    has_credit = bool(re.search(r'\bcredit(?:ed)?\b', full_text))
-    has_debit  = bool(re.search(r'\bdebit(?:ed)?\b',  full_text))
+    # ── Broad bank-alert keyword sets ────────────────────────────
+    # Words banks use when money arrives (credit-side)
+    CREDIT_KEYWORDS = re.compile(
+        r'\b(?:credited|credit|received|deposited|deposit|refunded|refund|'
+        r'cashback|cash\s*back|reversed|reversal|added\s+to\s+(?:your\s+)?account|'
+        r'money\s+(?:has\s+been\s+)?(?:received|added)|inward\s+transfer|'
+        r'neft\s+(?:credit|received)|imps\s+credit|rtgs\s+credit)\b',
+        re.IGNORECASE,
+    )
+    # Words banks use when money leaves (debit-side)
+    DEBIT_KEYWORDS = re.compile(
+        r'\b(?:debited|debit|payment|paid|purchase|spent|charged|withdrawn|'
+        r'withdrawal|transferred|transfer\s+(?:of|from)|auto[\s-]?debit|'
+        r'emi\s+(?:paid|debited|deducted)|deducted|shopping|transaction\s+(?:of|for)|'
+        r'neft\s+debit|imps\s+debit|rtgs\s+debit|upi\s+(?:payment|debit)|'
+        r'mandate\s+executed|standing\s+instruction)\b',
+        re.IGNORECASE,
+    )
+
+    has_credit = bool(CREDIT_KEYWORDS.search(full_text))
+    has_debit  = bool(DEBIT_KEYWORDS.search(full_text))
 
     if not has_credit and not has_debit:
         return []
 
-    # Extract amounts — look for ₹, Rs, INR, USD, $
+    # ── Extract amounts — ₹, Rs, INR, USD, $ ────────────────────
     amount_patterns = [
         r'(?:inr|rs\.?|₹|usd|\$)\s*([\d,]+(?:\.\d{1,2})?)',
         r'([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rs\.?|₹)',
-        r'amount[:\s]+(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
-        r'(?:debited|credited)[^\d]*([\d,]+(?:\.\d{1,2})?)',
+        r'amount\s*(?:of\s*)?(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
+        r'(?:debited|credited|paid|received|deposited|withdrawn)[^\d]*([\d,]+(?:\.\d{1,2})?)',
+        r'(?:payment|transaction)\s+(?:of\s+)?(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
     ]
     amounts = []
     for pat in amount_patterns:
@@ -3310,17 +3330,18 @@ def _parse_email_transactions(msg_bytes):
     desc = subject.strip() or "Email Transaction"
     desc = re.sub(r'\s+', ' ', desc)[:200]
 
-    # Determine type
-    # Credit = money received = income; Debit = money spent = expense
+    # Determine type: credit keywords → income, debit keywords → expense
     if has_credit and not has_debit:
         txn_type = "income"
     elif has_debit and not has_credit:
         txn_type = "expense"
     else:
-        # Both keywords present — check which appears first or has larger context
-        credit_pos = full_text.find("credit")
-        debit_pos  = full_text.find("debit")
-        txn_type   = "income" if credit_pos < debit_pos else "expense"
+        # Both present — whichever appears first wins
+        credit_pos = CREDIT_KEYWORDS.search(full_text)
+        debit_pos  = DEBIT_KEYWORDS.search(full_text)
+        c_start    = credit_pos.start() if credit_pos else len(full_text)
+        d_start    = debit_pos.start()  if debit_pos  else len(full_text)
+        txn_type   = "income" if c_start < d_start else "expense"
 
     return [{
         "date":        txn_date,
@@ -3384,11 +3405,14 @@ def email_scan():
         transactions = []
         seen_ids = set()
 
-        for keyword in ["credit", "debit"]:
-            # Search subject
+        # Search by subject keywords that banks commonly use in transaction alerts
+        SEARCH_KEYWORDS = [
+            "credited", "debited", "transaction alert", "payment", "deposited",
+            "withdrawn", "neft", "imps", "rtgs", "upi", "auto debit", "emi",
+        ]
+        for keyword in SEARCH_KEYWORDS:
             for criteria in [
                 f'(SINCE "{since_date}" SUBJECT "{keyword}")',
-                f'(SINCE "{since_date}" BODY "{keyword}")',
             ]:
                 try:
                     M.select("INBOX", readonly=True)
