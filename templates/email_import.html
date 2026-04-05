@@ -727,6 +727,50 @@
     custom:  '#',
   };
 
+  const SESSION_KEY = 'emailImportCreds';
+
+  function saveCreds() {
+    const creds = {
+      provider:    selectedProvider,
+      email:       document.getElementById('emailAddr').value.trim(),
+      password:    document.getElementById('emailPw').value,
+      custom_host: document.getElementById('customHost').value.trim(),
+      custom_port: document.getElementById('customPort').value.trim(),
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds));
+  }
+
+  function clearCreds() {
+    sessionStorage.removeItem(SESSION_KEY);
+  }
+
+  function restoreCredsIfAvailable() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      const creds = JSON.parse(raw);
+      // Restore provider chip
+      const chip = document.querySelector(`.provider-chip[data-provider="${creds.provider}"]`);
+      if (chip) {
+        document.querySelectorAll('.provider-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        selectedProvider = creds.provider;
+        const customRow = document.getElementById('customHostRow');
+        customRow.classList.toggle('d-none', selectedProvider !== 'custom');
+        const link = document.getElementById('appPwLink');
+        link.href = APP_PW_LINKS[selectedProvider] || '#';
+        link.style.display = selectedProvider === 'custom' ? 'none' : '';
+      }
+      // Restore fields
+      document.getElementById('emailAddr').value   = creds.email       || '';
+      document.getElementById('emailPw').value     = creds.password    || '';
+      document.getElementById('customHost').value  = creds.custom_host || '';
+      document.getElementById('customPort').value  = creds.custom_port || '993';
+      // Mark as connected without re-verifying (scan will catch bad creds if needed)
+      setConnected(true);
+    } catch (e) { /* ignore parse errors */ }
+  }
+
   function selectProvider(el) {
     document.querySelectorAll('.provider-chip').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
@@ -736,8 +780,11 @@
     const link = document.getElementById('appPwLink');
     link.href = APP_PW_LINKS[selectedProvider] || '#';
     link.style.display = selectedProvider === 'custom' ? 'none' : '';
-    // Reset connection state when provider changes
-    setConnected(false);
+    // Only reset connection state if provider changes while connected
+    if (emailConnected) {
+      clearCreds();
+      setConnected(false);
+    }
   }
 
   function toggleEmailPw() {
@@ -749,7 +796,6 @@
 
   function setConnected(ok) {
     emailConnected = ok;
-    // Step 1 card: swap between form and compact connected state
     const formBody  = document.getElementById('connectFormBody');
     const summary   = document.getElementById('connectedSummary');
     if (ok) {
@@ -760,15 +806,14 @@
       formBody.classList.remove('d-none');
       summary.classList.add('d-none');
     }
-    // Step 2: unlock when connected
     const scanCard = document.getElementById('card-scan');
     scanCard.style.opacity = ok ? '1' : '0.45';
     scanCard.style.pointerEvents = ok ? '' : 'none';
   }
 
   function disconnectEmail() {
+    clearCreds();
     setConnected(false);
-    // Clear scan results
     document.getElementById('card-email-results').classList.add('d-none');
     document.getElementById('connectError').classList.add('d-none');
     emailTransactions = [];
@@ -799,6 +844,7 @@
       });
       const data = await res.json();
       if (data.success) {
+        saveCreds();
         setConnected(true);
       } else {
         errEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' + escHtml(data.message);
@@ -1148,5 +1194,8 @@
   function escHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  // ── Auto-restore saved credentials on page load ──────────────
+  document.addEventListener('DOMContentLoaded', restoreCredsIfAvailable);
 </script>
 {% endblock %}
