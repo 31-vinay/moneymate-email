@@ -50,6 +50,7 @@ import ssl
 import socket
 import time
 import concurrent.futures
+import uuid
 import matplotlib
 
 matplotlib.use("Agg")
@@ -91,6 +92,10 @@ admin.add_view(AdminModelView(User, db.session))
 admin.add_view(AdminModelView(Income, db.session))
 admin.add_view(AdminModelView(Expense, db.session))
 admin.add_view(AdminModelView(Goal, db.session))
+
+# In-memory store for background email scan tasks.
+# Each entry: {task_id: {"future": Future, "started": float}}
+_scan_tasks: dict = {}
 
 
 @app.route("/create_admin")
@@ -3638,20 +3643,19 @@ def email_import_disconnect():
 @app.route("/email-import/scan", methods=["POST"])
 @login_required
 def email_import_scan():
+    """Start a background email scan and return a task_id immediately.
+
+    The client polls /email-import/scan/status/<task_id> until the scan
+    finishes.  This avoids blocking the HTTP connection for 20+ seconds,
+    which would be cut off by Replit's reverse-proxy timeout.
+    """
     cfg = session.get("imap_config")
     if not cfg:
         return jsonify(
             {"success": False, "message": "Not connected to any email account."}
         )
     days = int(request.get_json(force=True).get("days", 30))
-    # Run the IMAP scan in a worker thread so we can enforce a hard deadline.
-    # The Replit proxy closes connections after ~25 s, so we must respond
-    # before that.
-    # IMPORTANT: do NOT use "with ThreadPoolExecutor() as executor:" here —
-    # the context manager calls shutdown(wait=True) on exit, which blocks
-    # until the thread finishes even if future.result() already timed out.
-    # We call shutdown(wait=False) manually so the route returns immediately.
-    _ROUTE_TIMEOUT = 20  # seconds — hard ceiling for the HTTP response
+    task_id = str(uuid.uuid4())
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     future = executor.submit(
         scan_imap_emails,
@@ -3661,34 +3665,50 @@ def email_import_scan():
         cfg["password"],
         days,
     )
+    executor.shutdown(wait=False)
+    _scan_tasks[task_id] = {"future": future, "started": time.monotonic()}
+    return jsonify({"success": True, "task_id": task_id})
+
+
+@app.route("/email-import/scan/status/<task_id>", methods=["GET"])
+@login_required
+def email_import_scan_status(task_id):
+    """Poll for the result of a background email scan."""
+    task = _scan_tasks.get(task_id)
+    if not task:
+        return jsonify({"success": False, "message": "Scan task not found."})
+
+    future = task["future"]
+    elapsed = time.monotonic() - task["started"]
+
+    if not future.done():
+        if elapsed > 60:
+            _scan_tasks.pop(task_id, None)
+            return jsonify({"success": True, "status": "timeout"})
+        return jsonify({"success": True, "status": "pending", "elapsed": int(elapsed)})
+
+    _scan_tasks.pop(task_id, None)
     try:
-        transactions = future.result(timeout=_ROUTE_TIMEOUT)
-    except concurrent.futures.TimeoutError:
-        executor.shutdown(wait=False)
+        transactions = future.result()
         return jsonify(
             {
                 "success": True,
-                "transactions": [],
-                "count": 0,
-                "timed_out": True,
+                "status": "done",
+                "transactions": transactions,
+                "count": len(transactions),
             }
         )
     except imaplib.IMAP4.error as e:
-        executor.shutdown(wait=False)
         session.pop("imap_config", None)
         return jsonify(
             {
                 "success": False,
+                "status": "error",
                 "message": f"Email session expired — please reconnect. ({e})",
             }
         )
     except Exception as e:
-        executor.shutdown(wait=False)
-        return jsonify({"success": False, "message": str(e)})
-    executor.shutdown(wait=False)
-    return jsonify(
-        {"success": True, "transactions": transactions, "count": len(transactions)}
-    )
+        return jsonify({"success": False, "status": "error", "message": str(e)})
 
 
 @app.route("/email-import/import", methods=["POST"])

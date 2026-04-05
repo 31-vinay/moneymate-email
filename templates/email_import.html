@@ -752,6 +752,9 @@
   });
 
   // ── Email: Scan ──────────────────────────────────────────────
+  // The scan is a two-step process to avoid HTTP proxy timeouts:
+  //   1. POST /email-import/scan  → returns a task_id immediately
+  //   2. Poll GET /email-import/scan/status/<task_id> every 2 s until done
   async function scanEmails() {
     const days = document.getElementById('scanDays').value;
     const errEl = document.getElementById('scanError');
@@ -761,12 +764,14 @@
     const card = document.getElementById('card-results');
 
     errEl.classList.add('d-none');
-    infoEl.textContent = 'Scanning your inbox for financial emails… this may take up to 20 seconds.';
+    infoEl.textContent = 'Starting inbox scan…';
     infoEl.classList.remove('d-none');
     spin.classList.remove('d-none');
     btn.disabled = true;
     card.classList.add('d-none');
 
+    // ── Step 1: start the background scan ────────────────────────
+    let taskId;
     try {
       const res = await fetch('/email-import/scan', {
         method: 'POST',
@@ -774,27 +779,69 @@
         body: JSON.stringify({days: parseInt(days)})
       });
       const data = await res.json();
-      infoEl.classList.add('d-none');
-      if (data.success) {
-        if (data.timed_out) {
-          errEl.textContent = 'Scan timed out — your inbox is very large. Try a shorter look-back window (e.g. Last 7 days) and scan again.';
-          errEl.classList.remove('d-none');
-        } else {
-          parsedTransactions = data.transactions;
-          renderResults(parsedTransactions, 'email');
-          card.classList.remove('d-none');
-        }
-      } else {
-        errEl.textContent = data.message;
+      if (!data.success) {
+        infoEl.classList.add('d-none');
+        errEl.textContent = data.message || 'Could not start scan.';
         errEl.classList.remove('d-none');
+        spin.classList.add('d-none');
+        btn.disabled = false;
+        return;
       }
+      taskId = data.task_id;
     } catch (e) {
       infoEl.classList.add('d-none');
-      errEl.textContent = 'Network error during scan.';
+      errEl.textContent = 'Could not reach the server. Check your connection and try again.';
       errEl.classList.remove('d-none');
+      spin.classList.add('d-none');
+      btn.disabled = false;
+      return;
     }
-    spin.classList.add('d-none');
-    btn.disabled = false;
+
+    // ── Step 2: poll for the result every 2 seconds ───────────────
+    const poll = async () => {
+      try {
+        const res = await fetch('/email-import/scan/status/' + taskId);
+        const data = await res.json();
+
+        if (!data.success) {
+          infoEl.classList.add('d-none');
+          errEl.textContent = data.message || 'Scan failed.';
+          errEl.classList.remove('d-none');
+          spin.classList.add('d-none');
+          btn.disabled = false;
+          return;
+        }
+
+        if (data.status === 'pending') {
+          infoEl.textContent = 'Scanning your inbox… ' + (data.elapsed || 0) + 's elapsed';
+          setTimeout(poll, 2000);
+          return;
+        }
+
+        if (data.status === 'timeout') {
+          infoEl.classList.add('d-none');
+          errEl.textContent = 'Scan timed out — your inbox is very large. Try a shorter look-back window (e.g. Last 7 days) and scan again.';
+          errEl.classList.remove('d-none');
+          spin.classList.add('d-none');
+          btn.disabled = false;
+          return;
+        }
+
+        // status === 'done'
+        infoEl.classList.add('d-none');
+        parsedTransactions = data.transactions;
+        renderResults(parsedTransactions, 'email');
+        card.classList.remove('d-none');
+        spin.classList.add('d-none');
+        btn.disabled = false;
+
+      } catch (e) {
+        // Transient network hiccup — retry once more after 2 s
+        setTimeout(poll, 2000);
+      }
+    };
+
+    setTimeout(poll, 2000);
   }
 
   // ── Bank: File upload & drag-drop ────────────────────────────
