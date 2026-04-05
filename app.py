@@ -47,6 +47,8 @@ import openpyxl
 import xlrd
 import msoffcrypto
 import ssl
+import socket
+import time
 import matplotlib
 
 matplotlib.use("Agg")
@@ -442,6 +444,19 @@ def _is_financial_email(subject, from_addr):
 
 
 def scan_imap_emails(host, port, email_addr, password, days=30):
+    # Per-operation socket timeout (seconds) — prevents any single IMAP
+    # call from hanging indefinitely.
+    _SOCKET_TIMEOUT = 12
+    # Maximum total wall-clock seconds for the entire scan.  Must stay well
+    # under Replit's proxy keep-alive limit (~28 s) so the HTTP response
+    # is returned before the connection is dropped.
+    _SCAN_BUDGET = 22
+    # Maximum number of emails to inspect even if time allows.
+    _EMAIL_CAP = 150
+
+    socket.setdefaulttimeout(_SOCKET_TIMEOUT)
+    scan_start = time.monotonic()
+
     ctx = ssl.create_default_context()
     mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
     mail.login(email_addr, password)
@@ -452,29 +467,41 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
     ).strftime("%d-%b-%Y")
     _, message_ids = mail.search(None, f"SINCE {since_date}")
     msg_ids = message_ids[0].split()
-    # Process most recent first, cap at 300
-    msg_ids = msg_ids[-300:][::-1]
+    # Most recent first, respect the cap
+    msg_ids = msg_ids[-_EMAIL_CAP:][::-1]
 
     transactions = []
     seen_ids = set()
 
     for mid in msg_ids:
+        # Stop early if we are approaching the time budget
+        if time.monotonic() - scan_start >= _SCAN_BUDGET:
+            break
         try:
-            _, msg_data = mail.fetch(mid, "(RFC822)")
-            raw = msg_data[0][1]
-            msg = email_lib.message_from_bytes(raw)
+            # ── Step 1: fetch only the headers (fast, small) ──────────
+            _, hdr_data = mail.fetch(mid, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])")
+            hdr_raw = hdr_data[0][1] if hdr_data and hdr_data[0] else b""
+            hdr_msg = email_lib.message_from_bytes(hdr_raw)
 
-            subject = _decode_header_str(msg.get("Subject", ""))
-            from_addr = msg.get("From", "")
-            date_str = msg.get("Date", "")
-            msg_id = msg.get("Message-ID", mid.decode()).strip("<> ")
+            subject = _decode_header_str(hdr_msg.get("Subject", ""))
+            from_addr = hdr_msg.get("From", "")
+            date_str = hdr_msg.get("Date", "")
+            msg_id = hdr_msg.get("Message-ID", mid.decode()).strip("<> ")
 
             if msg_id in seen_ids:
                 continue
             seen_ids.add(msg_id)
 
+            # Skip non-financial emails without downloading the body
             if not _is_financial_email(subject, from_addr):
                 continue
+
+            # ── Step 2: only now fetch the full body ──────────────────
+            if time.monotonic() - scan_start >= _SCAN_BUDGET:
+                break
+            _, msg_data = mail.fetch(mid, "(RFC822)")
+            raw = msg_data[0][1]
+            msg = email_lib.message_from_bytes(raw)
 
             body = _extract_text(msg)
             amount = _parse_amount(subject + " " + body[:3000])
@@ -509,7 +536,12 @@ def scan_imap_emails(host, port, email_addr, password, days=30):
         except Exception:
             continue
 
-    mail.logout()
+    try:
+        mail.logout()
+    except Exception:
+        pass
+    finally:
+        socket.setdefaulttimeout(None)
     return transactions
 
 
