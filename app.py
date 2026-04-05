@@ -3256,7 +3256,20 @@ def _parse_email_transactions(msg_bytes):
 
     msg = email_lib.message_from_bytes(msg_bytes)
 
-    # Decode subject
+    # ── Sender must look like a bank / official alert ────────────
+    sender = (msg.get("From", "") or "").lower()
+    # Known Indian bank domains and generic alert patterns
+    BANK_DOMAINS = (
+        "hdfcbank", "icicibank", "sbi", "axisbank", "kotak", "pnb",
+        "canarabank", "yesbank", "indusind", "federalbank", "unionbank",
+        "bankofbaroda", "idfcfirstbank", "rblbank", "bandhanbank",
+        "alerts", "noreply", "notify", "notification", "donotreply",
+        "transaction", "infosms", "netbanking", "actalerts",
+    )
+    if not any(d in sender for d in BANK_DOMAINS):
+        return []
+
+    # ── Decode subject ───────────────────────────────────────────
     raw_subj = msg.get("Subject", "") or ""
     decoded_parts = decode_header(raw_subj)
     subject = ""
@@ -3266,7 +3279,7 @@ def _parse_email_transactions(msg_bytes):
         else:
             subject += str(part)
 
-    # Decode date
+    # ── Decode date ──────────────────────────────────────────────
     raw_date = msg.get("Date", "") or ""
     try:
         from email.utils import parsedate_to_datetime
@@ -3278,20 +3291,26 @@ def _parse_email_transactions(msg_bytes):
     body = _decode_payload(msg)
     full_text = (subject + " " + body).lower()
 
-    # ── Broad bank-alert keyword sets ────────────────────────────
-    # Words banks use when money arrives (credit-side)
+    # ── Require at least one bank-alert signal ───────────────────
+    # Must mention an account reference or UPI/GPay marker
+    BANK_SIGNAL = re.compile(
+        r'\b(?:a/c|ac|acct|account|upi|gpay|google\s*pay|ref\s*no|'
+        r'transaction\s*id|txn|neft|imps|rtgs|balance)\b',
+        re.IGNORECASE,
+    )
+    if not BANK_SIGNAL.search(full_text):
+        return []
+
+    # ── Credit / Debit keyword sets ──────────────────────────────
     CREDIT_KEYWORDS = re.compile(
         r'\b(?:credited|credit|received|deposited|deposit|refunded|refund|'
-        r'cashback|cash\s*back|reversed|reversal|added\s+to\s+(?:your\s+)?account|'
-        r'money\s+(?:has\s+been\s+)?(?:received|added)|inward\s+transfer|'
+        r'cashback|cash\s*back|reversed|reversal|inward\s+transfer|'
         r'neft\s+(?:credit|received)|imps\s+credit|rtgs\s+credit)\b',
         re.IGNORECASE,
     )
-    # Words banks use when money leaves (debit-side)
     DEBIT_KEYWORDS = re.compile(
         r'\b(?:debited|debit|payment|paid|purchase|spent|charged|withdrawn|'
-        r'withdrawal|transferred|transfer\s+(?:of|from)|auto[\s-]?debit|'
-        r'emi\s+(?:paid|debited|deducted)|deducted|shopping|transaction\s+(?:of|for)|'
+        r'withdrawal|auto[\s-]?debit|emi\s+(?:paid|debited|deducted)|deducted|'
         r'neft\s+debit|imps\s+debit|rtgs\s+debit|upi\s+(?:payment|debit)|'
         r'mandate\s+executed|standing\s+instruction)\b',
         re.IGNORECASE,
@@ -3303,40 +3322,76 @@ def _parse_email_transactions(msg_bytes):
     if not has_credit and not has_debit:
         return []
 
-    # ── Extract amounts — ₹, Rs, INR, USD, $ ────────────────────
-    amount_patterns = [
-        r'(?:inr|rs\.?|₹|usd|\$)\s*([\d,]+(?:\.\d{1,2})?)',
-        r'([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rs\.?|₹)',
-        r'amount\s*(?:of\s*)?(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
-        r'(?:debited|credited|paid|received|deposited|withdrawn)[^\d]*([\d,]+(?:\.\d{1,2})?)',
-        r'(?:payment|transaction)\s+(?:of\s+)?(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
+    # ── Amount extraction: priority-ordered, take FIRST match ────
+    # Bank emails follow: "debited with INR 500.00 ... Avl Bal: INR 12,345.67"
+    # We must pick the TRANSACTION amount, not the balance.
+    # High-priority patterns: amount immediately after the action verb or "of"
+    HIGH_PRIORITY = [
+        # "debited with INR 500" / "credited with Rs. 500"
+        r'(?:debited|credited)\s+(?:with\s+)?(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        # "debited by INR 500" / "credited by Rs. 500"
+        r'(?:debited|credited)\s+by\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        # "INR 500 debited" / "Rs 500 credited"
+        r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)\s+(?:has\s+been\s+)?(?:debited|credited)',
+        # "payment of INR 500" / "transaction of Rs. 500"
+        r'(?:payment|transaction|transfer|purchase)\s+of\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        # "amount INR 500" / "amount of Rs 500"
+        r'amount\s*(?:of\s*)?(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        # "paid INR 500" / "received INR 500"
+        r'(?:paid|received|withdrawn|deposited|spent|deducted)\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        # "for INR 500" (GPay alert: "a/c XX debited for INR 500")
+        r'(?:debited|credited)\s+for\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+        # subject line "A/c XX1234 debited INR 500"
+        r'(?:debited|credited)\s+(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
     ]
-    amounts = []
-    for pat in amount_patterns:
-        for m in re.finditer(pat, full_text, re.IGNORECASE):
+
+    amount = None
+    for pat in HIGH_PRIORITY:
+        m = re.search(pat, full_text, re.IGNORECASE)
+        if m:
             try:
                 val = float(m.group(1).replace(",", ""))
                 if val > 0:
-                    amounts.append(val)
+                    amount = val
+                    break
             except Exception:
                 continue
 
-    if not amounts:
+    # Fallback: first currency-prefixed number that is NOT preceded by
+    # balance/available/avl/bal keywords
+    if amount is None:
+        BALANCE_GUARD = re.compile(
+            r'(?:avail(?:able)?|avl|bal(?:ance)?|closing|opening)\s*(?:bal(?:ance)?|amt|amount)?\s*'
+            r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+            re.IGNORECASE,
+        )
+        balance_positions = {m.start() for m in BALANCE_GUARD.finditer(full_text)}
+
+        for m in re.finditer(r'(?:inr|rs\.?|₹)\s*([\d,]+(?:\.\d{1,2})?)', full_text, re.IGNORECASE):
+            # Skip if this match is part of a balance phrase
+            if any(abs(m.start() - bp) < 60 for bp in balance_positions):
+                continue
+            try:
+                val = float(m.group(1).replace(",", ""))
+                if val > 0:
+                    amount = val
+                    break
+            except Exception:
+                continue
+
+    if not amount:
         return []
 
-    amount = max(amounts)
-
-    # Build a clean description from subject
-    desc = subject.strip() or "Email Transaction"
+    # ── Description from subject ─────────────────────────────────
+    desc = subject.strip() or "Bank Transaction"
     desc = re.sub(r'\s+', ' ', desc)[:200]
 
-    # Determine type: credit keywords → income, debit keywords → expense
+    # ── Determine credit/debit type ──────────────────────────────
     if has_credit and not has_debit:
         txn_type = "income"
     elif has_debit and not has_credit:
         txn_type = "expense"
     else:
-        # Both present — whichever appears first wins
         credit_pos = CREDIT_KEYWORDS.search(full_text)
         debit_pos  = DEBIT_KEYWORDS.search(full_text)
         c_start    = credit_pos.start() if credit_pos else len(full_text)
@@ -3406,9 +3461,11 @@ def email_scan():
         seen_ids = set()
 
         # Search by subject keywords that banks commonly use in transaction alerts
+        # Including GPay / UPI keywords that appear in bank notification subjects
         SEARCH_KEYWORDS = [
-            "credited", "debited", "transaction alert", "payment", "deposited",
+            "credited", "debited", "transaction alert", "deposited",
             "withdrawn", "neft", "imps", "rtgs", "upi", "auto debit", "emi",
+            "gpay", "google pay", "payment alert", "account alert",
         ]
         for keyword in SEARCH_KEYWORDS:
             for criteria in [
