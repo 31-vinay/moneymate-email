@@ -3191,6 +3191,309 @@ def email_import():
     return render_template("email_import.html")
 
 
+# ─── IMAP Email Import ────────────────────────────────────────
+
+IMAP_PROVIDERS = {
+    "gmail":   ("imap.gmail.com",          993),
+    "outlook": ("outlook.office365.com",   993),
+    "yahoo":   ("imap.mail.yahoo.com",     993),
+    "icloud":  ("imap.mail.me.com",        993),
+}
+
+
+def _imap_connect(provider, email_addr, password, custom_host=None, custom_port=None):
+    import imaplib
+    import ssl
+    if provider == "custom":
+        host = custom_host or ""
+        port = int(custom_port or 993)
+    else:
+        host, port = IMAP_PROVIDERS.get(provider, ("", 993))
+    if not host:
+        raise ValueError("Unknown email provider.")
+    ctx = ssl.create_default_context()
+    M = imaplib.IMAP4_SSL(host, port, ssl_context=ctx)
+    M.login(email_addr, password)
+    return M
+
+
+def _decode_payload(msg):
+    import email as email_lib
+    body = ""
+    if msg.is_multipart():
+        for part in msg.walk():
+            ct = part.get_content_type()
+            if ct in ("text/plain", "text/html"):
+                try:
+                    raw = part.get_payload(decode=True) or b""
+                    charset = part.get_content_charset() or "utf-8"
+                    chunk = raw.decode(charset, errors="replace")
+                    if ct == "text/html":
+                        from bs4 import BeautifulSoup
+                        chunk = BeautifulSoup(chunk, "html.parser").get_text(separator=" ")
+                    body += " " + chunk
+                    if len(body) > 8000:
+                        break
+                except Exception:
+                    continue
+    else:
+        try:
+            raw = msg.get_payload(decode=True) or b""
+            charset = msg.get_content_charset() or "utf-8"
+            body = raw.decode(charset, errors="replace")
+            if msg.get_content_type() == "text/html":
+                from bs4 import BeautifulSoup
+                body = BeautifulSoup(body, "html.parser").get_text(separator=" ")
+        except Exception:
+            pass
+    return body[:8000]
+
+
+def _parse_email_transactions(msg_bytes):
+    import email as email_lib
+    from email.header import decode_header
+    import re
+
+    msg = email_lib.message_from_bytes(msg_bytes)
+
+    # Decode subject
+    raw_subj = msg.get("Subject", "") or ""
+    decoded_parts = decode_header(raw_subj)
+    subject = ""
+    for part, enc in decoded_parts:
+        if isinstance(part, bytes):
+            subject += part.decode(enc or "utf-8", errors="replace")
+        else:
+            subject += str(part)
+
+    # Decode date
+    raw_date = msg.get("Date", "") or ""
+    try:
+        from email.utils import parsedate_to_datetime
+        dt = parsedate_to_datetime(raw_date)
+        txn_date = dt.strftime("%Y-%m-%d")
+    except Exception:
+        txn_date = datetime.now().strftime("%Y-%m-%d")
+
+    body = _decode_payload(msg)
+    full_text = (subject + " " + body).lower()
+
+    has_credit = bool(re.search(r'\bcredit(?:ed)?\b', full_text))
+    has_debit  = bool(re.search(r'\bdebit(?:ed)?\b',  full_text))
+
+    if not has_credit and not has_debit:
+        return []
+
+    # Extract amounts — look for ₹, Rs, INR, USD, $
+    amount_patterns = [
+        r'(?:inr|rs\.?|₹|usd|\$)\s*([\d,]+(?:\.\d{1,2})?)',
+        r'([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rs\.?|₹)',
+        r'amount[:\s]+(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
+        r'(?:debited|credited)[^\d]*([\d,]+(?:\.\d{1,2})?)',
+    ]
+    amounts = []
+    for pat in amount_patterns:
+        for m in re.finditer(pat, full_text, re.IGNORECASE):
+            try:
+                val = float(m.group(1).replace(",", ""))
+                if val > 0:
+                    amounts.append(val)
+            except Exception:
+                continue
+
+    if not amounts:
+        return []
+
+    amount = max(amounts)
+
+    # Build a clean description from subject
+    desc = subject.strip() or "Email Transaction"
+    desc = re.sub(r'\s+', ' ', desc)[:200]
+
+    # Determine type
+    # Credit = money received = income; Debit = money spent = expense
+    if has_credit and not has_debit:
+        txn_type = "income"
+    elif has_debit and not has_credit:
+        txn_type = "expense"
+    else:
+        # Both keywords present — check which appears first or has larger context
+        credit_pos = full_text.find("credit")
+        debit_pos  = full_text.find("debit")
+        txn_type   = "income" if credit_pos < debit_pos else "expense"
+
+    return [{
+        "date":        txn_date,
+        "description": desc,
+        "amount":      round(amount, 2),
+        "type":        txn_type,
+    }]
+
+
+@app.route("/email/connect", methods=["POST"])
+@login_required
+def email_connect():
+    data        = request.get_json(force=True)
+    provider    = data.get("provider", "").strip()
+    email_addr  = data.get("email", "").strip()
+    password    = data.get("password", "").strip()
+    custom_host = data.get("custom_host", "").strip()
+    custom_port = data.get("custom_port", "").strip()
+
+    if not email_addr or not password:
+        return jsonify({"success": False, "message": "Email and password are required."})
+
+    try:
+        M = _imap_connect(provider, email_addr, password, custom_host, custom_port)
+        M.logout()
+        return jsonify({"success": True, "message": "Connected successfully!"})
+    except Exception as e:
+        msg = str(e)
+        if "AUTHENTICATIONFAILED" in msg or "Invalid credentials" in msg.lower():
+            msg = "Authentication failed. Please check your email and App Password."
+        elif "getaddrinfo" in msg or "Name or service" in msg:
+            msg = "Could not reach the mail server. Check your internet connection or custom host."
+        return jsonify({"success": False, "message": msg})
+
+
+@app.route("/email/scan", methods=["POST"])
+@login_required
+def email_scan():
+    import imaplib
+    import email as email_lib
+
+    data        = request.get_json(force=True)
+    provider    = data.get("provider", "").strip()
+    email_addr  = data.get("email", "").strip()
+    password    = data.get("password", "").strip()
+    custom_host = data.get("custom_host", "").strip()
+    custom_port = data.get("custom_port", "").strip()
+    days        = int(data.get("days", 30))
+
+    if not email_addr or not password:
+        return jsonify({"success": False, "message": "Email and password are required."})
+
+    try:
+        M = _imap_connect(provider, email_addr, password, custom_host, custom_port)
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Connection failed: {e}"})
+
+    try:
+        since_date = (datetime.now() - timedelta(days=days)).strftime("%d-%b-%Y")
+
+        transactions = []
+        seen_ids = set()
+
+        for keyword in ["credit", "debit"]:
+            # Search subject
+            for criteria in [
+                f'(SINCE "{since_date}" SUBJECT "{keyword}")',
+                f'(SINCE "{since_date}" BODY "{keyword}")',
+            ]:
+                try:
+                    M.select("INBOX", readonly=True)
+                    status, data_ids = M.search(None, criteria)
+                    if status != "OK":
+                        continue
+                    msg_ids = data_ids[0].split() if data_ids[0] else []
+                    # Limit to last 200 per keyword/criteria combination
+                    msg_ids = msg_ids[-200:]
+                    for mid in msg_ids:
+                        if mid in seen_ids:
+                            continue
+                        seen_ids.add(mid)
+                        try:
+                            status2, raw = M.fetch(mid, "(RFC822)")
+                            if status2 != "OK" or not raw or not raw[0]:
+                                continue
+                            msg_bytes = raw[0][1] if isinstance(raw[0], tuple) else None
+                            if not msg_bytes:
+                                continue
+                            txns = _parse_email_transactions(msg_bytes)
+                            transactions.extend(txns)
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+
+        M.logout()
+
+        # Deduplicate by (date, amount, type)
+        unique, seen_keys = [], set()
+        for t in transactions:
+            key = (t["date"], t["amount"], t["type"])
+            if key not in seen_keys:
+                seen_keys.add(key)
+                unique.append(t)
+
+        unique.sort(key=lambda x: x["date"], reverse=True)
+
+        return jsonify({"success": True, "transactions": unique, "count": len(unique)})
+    except Exception as e:
+        try:
+            M.logout()
+        except Exception:
+            pass
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route("/email/import", methods=["POST"])
+@login_required
+def email_import_save():
+    items = request.get_json(force=True).get("transactions", [])
+    imported_count = 0
+    skipped_count  = 0
+    for txn in items:
+        try:
+            txn_date = datetime.strptime(txn["date"], "%Y-%m-%d")
+            amount   = float(txn["amount"])
+            desc     = txn.get("description", "")[:200]
+            txn_type = txn.get("type", "expense")
+            if txn_type == "income":
+                exists = Income.query.filter_by(
+                    user_id=current_user.id,
+                    source="Email Import",
+                    amount=amount,
+                    date_received=txn_date,
+                    description=desc,
+                ).first()
+                if exists:
+                    skipped_count += 1
+                    continue
+                db.session.add(Income(
+                    user_id=current_user.id,
+                    source="Email Import",
+                    amount=amount,
+                    date_received=txn_date,
+                    description=desc,
+                ))
+            else:
+                exists = Expense.query.filter_by(
+                    user_id=current_user.id,
+                    amount=amount,
+                    date=txn_date,
+                    description=desc,
+                ).first()
+                if exists:
+                    skipped_count += 1
+                    continue
+                cat, essential, sub = auto_categorize_transaction(desc)
+                db.session.add(Expense(
+                    user_id=current_user.id,
+                    category=cat,
+                    amount=amount,
+                    date=txn_date,
+                    description=desc,
+                    is_essential=essential,
+                    is_subscription=sub,
+                ))
+            imported_count += 1
+        except Exception:
+            continue
+    db.session.commit()
+    return jsonify({"success": True, "imported": imported_count, "skipped": skipped_count})
+
+
 @app.route("/bank-statement/upload", methods=["POST"])
 @login_required
 def bank_statement_upload():
