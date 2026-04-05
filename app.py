@@ -3645,33 +3645,36 @@ def email_import_scan():
         )
     days = int(request.get_json(force=True).get("days", 30))
     # Run the IMAP scan in a worker thread so we can enforce a hard deadline.
-    # The Replit proxy closes connections that take longer than ~25 s, so we
-    # must respond well before that regardless of how many emails are found.
+    # The Replit proxy closes connections after ~25 s, so we must respond
+    # before that.
+    # IMPORTANT: do NOT use "with ThreadPoolExecutor() as executor:" here —
+    # the context manager calls shutdown(wait=True) on exit, which blocks
+    # until the thread finishes even if future.result() already timed out.
+    # We call shutdown(wait=False) manually so the route returns immediately.
     _ROUTE_TIMEOUT = 20  # seconds — hard ceiling for the HTTP response
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(
+        scan_imap_emails,
+        cfg["host"],
+        cfg["port"],
+        cfg["email"],
+        cfg["password"],
+        days,
+    )
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                scan_imap_emails,
-                cfg["host"],
-                cfg["port"],
-                cfg["email"],
-                cfg["password"],
-                days,
-            )
-            try:
-                transactions = future.result(timeout=_ROUTE_TIMEOUT)
-            except concurrent.futures.TimeoutError:
-                # Return whatever the thread has collected so far isn't
-                # accessible from here, so return an empty list with a note.
-                return jsonify(
-                    {
-                        "success": True,
-                        "transactions": [],
-                        "count": 0,
-                        "timed_out": True,
-                    }
-                )
+        transactions = future.result(timeout=_ROUTE_TIMEOUT)
+    except concurrent.futures.TimeoutError:
+        executor.shutdown(wait=False)
+        return jsonify(
+            {
+                "success": True,
+                "transactions": [],
+                "count": 0,
+                "timed_out": True,
+            }
+        )
     except imaplib.IMAP4.error as e:
+        executor.shutdown(wait=False)
         session.pop("imap_config", None)
         return jsonify(
             {
@@ -3680,7 +3683,9 @@ def email_import_scan():
             }
         )
     except Exception as e:
+        executor.shutdown(wait=False)
         return jsonify({"success": False, "message": str(e)})
+    executor.shutdown(wait=False)
     return jsonify(
         {"success": True, "transactions": transactions, "count": len(transactions)}
     )
