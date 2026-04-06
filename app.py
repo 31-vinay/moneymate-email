@@ -38,6 +38,11 @@ import base64
 import zipfile
 import re
 import csv
+import imaplib
+import email as email_lib
+from email.header import decode_header
+from email.utils import parsedate_to_datetime
+import ssl
 import pdfplumber
 import openpyxl
 import xlrd
@@ -3181,13 +3186,311 @@ def parse_bank_statement(file_bytes, filename, password=None):
 
 
 # ─────────────────────────────────────────────────────────────
-#  Import Routes (Bank Statement)
+#  IMAP Email Parsing Helpers
+# ─────────────────────────────────────────────────────────────
+
+IMAP_PRESETS = {
+    "gmail":   {"host": "imap.gmail.com",           "port": 993},
+    "outlook": {"host": "imap-mail.outlook.com",    "port": 993},
+    "yahoo":   {"host": "imap.mail.yahoo.com",      "port": 993},
+    "hotmail": {"host": "imap-mail.outlook.com",    "port": 993},
+    "icloud":  {"host": "imap.mail.me.com",         "port": 993},
+}
+
+FINANCIAL_SUBJECT_KEYWORDS = [
+    "transaction", "payment", "purchase", "receipt", "order", "invoice",
+    "debit", "credit", "charged", "statement", "bill", "transfer",
+    "alert", "notification", "confirmation", "refund", "deposit",
+    "subscription", "auto-pay", "autopay", "due", "amount",
+]
+
+FINANCIAL_SENDER_KEYWORDS = [
+    "bank", "paypal", "paytm", "stripe", "amazon", "netflix", "spotify",
+    "apple", "google", "microsoft", "hulu", "prime", "uber", "lyft",
+    "razorpay", "hdfc", "sbi", "icici", "axis", "netsuite", "venmo",
+    "cashapp", "zelle", "chase", "citibank", "wells", "fargo",
+]
+
+CATEGORY_KEYWORD_MAP = [
+    (["grocery", "supermarket", "safeway", "kroger", "walmart", "costco", "whole foods", "amazon fresh", "trader joe"], ("Food & Groceries", "Groceries")),
+    (["restaurant", "dining", "bistro", "cafe", "diner", "eatery", "sushi", "pizza", "burger"], ("Food & Groceries", "Dining Out")),
+    (["coffee", "starbucks", "dunkin", "costa"], ("Food & Groceries", "Coffee Shops")),
+    (["food delivery", "doordash", "grubhub", "ubereats", "zomato", "swiggy"], ("Food & Groceries", "Food Delivery")),
+    (["fast food", "mcdonald", "kfc", "subway", "domino", "taco bell", "wendy", "burger king"], ("Food & Groceries", "Fast Food")),
+    (["uber", "lyft", "taxi", "rideshare", "ola", "grab"], ("Transportation", "Taxi/Rideshare")),
+    (["fuel", "gas station", "petrol", "shell", "bp ", "chevron", "exxon"], ("Transportation", "Fuel")),
+    (["metro", "bus", "transit", "train", "subway pass", "rail"], ("Transportation", "Public Transport")),
+    (["netflix", "hulu", "disney+", "hbo", "prime video", "apple tv", "peacock", "paramount"], ("Entertainment", "Streaming Services")),
+    (["spotify", "apple music", "tidal", "deezer", "pandora", "youtube music"], ("Entertainment", "Music Streaming")),
+    (["gym", "fitness", "planet fitness", "equinox", "crunch"], ("Personal & Lifestyle", "Gym Membership")),
+    (["electricity", "electric", "power bill"], ("Utilities", "Electricity")),
+    (["water bill"], ("Utilities", "Water")),
+    (["internet", "broadband", "comcast", "xfinity", "att", "verizon", "spectrum"], ("Utilities", "Internet")),
+    (["mobile", "phone bill", "t-mobile", "sprint", "cricket"], ("Utilities", "Mobile Phone")),
+    (["amazon", "ebay", "etsy", "shopify", "online shopping", "shop", "purchase from"], ("Shopping", "Online Shopping")),
+    (["doctor", "clinic", "hospital", "medical", "health", "dental", "pharmacy", "prescription"], ("Healthcare", "Doctor Visits")),
+    (["insurance", "policy", "premium"], ("Insurance", "Health Insurance")),
+    (["school", "tuition", "university", "college", "course", "udemy", "coursera"], ("Education", "School Tuition")),
+    (["rent", "lease", "landlord"], ("Housing", "Rent")),
+    (["salary", "payroll", "wages", "paycheck"], ("Income", "Salary")),
+    (["refund", "cashback", "reward"], ("Income", "Refund")),
+]
+
+
+def _ei_decode_header(raw):
+    parts = decode_header(raw or "")
+    result = ""
+    for part, enc in parts:
+        if isinstance(part, bytes):
+            result += part.decode(enc or "utf-8", errors="ignore")
+        else:
+            result += str(part)
+    return result
+
+
+def _ei_extract_text(msg):
+    plain, html = "", ""
+    if msg.is_multipart():
+        for part in msg.walk():
+            ctype = part.get_content_type()
+            payload = part.get_payload(decode=True)
+            if not payload:
+                continue
+            decoded = payload.decode("utf-8", errors="ignore")
+            if ctype == "text/plain":
+                plain += decoded
+            elif ctype == "text/html":
+                html += decoded
+    else:
+        payload = msg.get_payload(decode=True)
+        if payload:
+            decoded = payload.decode("utf-8", errors="ignore")
+            if msg.get_content_type() == "text/html":
+                html = decoded
+            else:
+                plain = decoded
+    if html and not plain.strip():
+        soup = BeautifulSoup(html, "html.parser")
+        plain = soup.get_text(separator=" ", strip=True)
+    return plain
+
+
+def _ei_parse_amount(text):
+    patterns = [
+        r'\$\s*([\d,]+\.?\d*)',
+        r'USD\s+([\d,]+\.?\d*)',
+        r'Rs\.?\s*([\d,]+\.?\d*)',
+        r'INR\s+([\d,]+\.?\d*)',
+        r'(?:amount|total|charged|debit|credit)[:\s]+(?:of\s+)?\$?\s*([\d,]+\.?\d*)',
+        r'payment of\s+\$?\s*([\d,]+\.?\d*)',
+        r'\b([\d,]{1,10}\.\d{2})\b',
+    ]
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            try:
+                val = float(m.group(1).replace(",", ""))
+                if 0.01 <= val <= 999999:
+                    return round(val, 2)
+            except ValueError:
+                continue
+    return None
+
+
+def _ei_guess_category(subject, body):
+    combined = (subject + " " + body).lower()
+    for keywords, (main_cat, sub_cat) in CATEGORY_KEYWORD_MAP:
+        if any(kw in combined for kw in keywords):
+            return main_cat, sub_cat
+    return "Other Expenses", "Miscellaneous"
+
+
+def _ei_is_income(subject, body):
+    combined = (subject + " " + body).lower()
+    income_signals = [
+        "received", "credited to your account", "deposit", "refund", "cashback",
+        "salary", "payroll", "transfer received", "payment received", "reward",
+    ]
+    return any(s in combined for s in income_signals)
+
+
+def _ei_is_financial(subject, from_addr):
+    sub_lower  = subject.lower()
+    from_lower = from_addr.lower()
+    if any(kw in sub_lower  for kw in FINANCIAL_SUBJECT_KEYWORDS):
+        return True
+    if any(kw in from_lower for kw in FINANCIAL_SENDER_KEYWORDS):
+        return True
+    return False
+
+
+def scan_imap_emails(host, port, email_addr, password, days=30):
+    ctx  = ssl.create_default_context()
+    mail = imaplib.IMAP4_SSL(host, int(port), ssl_context=ctx)
+    mail.login(email_addr, password)
+    mail.select("INBOX")
+
+    since_date = (datetime.utcnow() - timedelta(days=days)).strftime("%d-%b-%Y")
+    _, message_ids = mail.search(None, f"SINCE {since_date}")
+    msg_ids = message_ids[0].split()
+    msg_ids = msg_ids[-300:][::-1]
+
+    transactions = []
+    seen_ids = set()
+
+    for mid in msg_ids:
+        try:
+            _, msg_data = mail.fetch(mid, "(RFC822)")
+            raw = msg_data[0][1]
+            msg = email_lib.message_from_bytes(raw)
+
+            subject   = _ei_decode_header(msg.get("Subject", ""))
+            from_addr = msg.get("From", "")
+            date_str  = msg.get("Date", "")
+            msg_id    = msg.get("Message-ID", mid.decode()).strip("<> ")
+
+            if msg_id in seen_ids:
+                continue
+            seen_ids.add(msg_id)
+
+            if not _ei_is_financial(subject, from_addr):
+                continue
+
+            body   = _ei_extract_text(msg)
+            amount = _ei_parse_amount(subject + " " + body[:3000])
+            if not amount:
+                continue
+
+            is_income = _ei_is_income(subject, body)
+            main_cat, sub_cat = _ei_guess_category(subject, body)
+            if is_income:
+                main_cat, sub_cat = "Income", "Transfer/Other"
+
+            try:
+                txn_date = parsedate_to_datetime(date_str).strftime("%Y-%m-%d")
+            except Exception:
+                txn_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+            transactions.append({
+                "msg_id":      msg_id,
+                "subject":     subject[:120],
+                "from":        from_addr[:100],
+                "date":        txn_date,
+                "amount":      amount,
+                "type":        "income" if is_income else "expense",
+                "main_cat":    main_cat,
+                "sub_cat":     sub_cat,
+                "description": subject[:200],
+            })
+        except Exception:
+            continue
+
+    mail.logout()
+    return transactions
+
+
+# ─────────────────────────────────────────────────────────────
+#  Import Routes (Email + Bank Statement)
 # ─────────────────────────────────────────────────────────────
 
 @app.route("/email-import")
 @login_required
 def email_import():
-    return render_template("email_import.html")
+    imap_connected = "imap_config" in session
+    return render_template("email_import.html", imap_connected=imap_connected)
+
+
+@app.route("/email-import/connect", methods=["POST"])
+@login_required
+def email_import_connect():
+    data       = request.get_json(force=True)
+    host       = data.get("host", "").strip()
+    port       = int(data.get("port", 993))
+    email_addr = data.get("email", "").strip()
+    password   = data.get("password", "").strip()
+
+    if not all([host, email_addr, password]):
+        return jsonify({"success": False, "message": "All fields are required."})
+
+    try:
+        ctx  = ssl.create_default_context()
+        mail = imaplib.IMAP4_SSL(host, port, ssl_context=ctx)
+        mail.login(email_addr, password)
+        mail.logout()
+        session["imap_config"] = {
+            "host": host, "port": port,
+            "email": email_addr, "password": password,
+        }
+        return jsonify({"success": True, "message": f"Connected to {host} successfully!"})
+    except imaplib.IMAP4.error as e:
+        return jsonify({"success": False, "message": f"Authentication failed — check your email/password or App Password. ({e})"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Connection failed: {e}"})
+
+
+@app.route("/email-import/disconnect", methods=["POST"])
+@login_required
+def email_import_disconnect():
+    session.pop("imap_config", None)
+    return jsonify({"success": True})
+
+
+@app.route("/email-import/scan", methods=["POST"])
+@login_required
+def email_import_scan():
+    cfg = session.get("imap_config")
+    if not cfg:
+        return jsonify({"success": False, "message": "Not connected to any email account."})
+    days = int(request.get_json(force=True).get("days", 30))
+    try:
+        transactions = scan_imap_emails(
+            cfg["host"], cfg["port"], cfg["email"], cfg["password"], days=days
+        )
+        return jsonify({"success": True, "transactions": transactions, "count": len(transactions)})
+    except imaplib.IMAP4.error as e:
+        session.pop("imap_config", None)
+        return jsonify({"success": False, "message": f"Email session expired — please reconnect. ({e})"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route("/email-import/import", methods=["POST"])
+@login_required
+def email_import_do():
+    items = request.get_json(force=True).get("transactions", [])
+    imported_count = 0
+    for txn in items:
+        try:
+            txn_date = datetime.strptime(txn["date"], "%Y-%m-%d")
+            amount   = float(txn["amount"])
+            desc     = txn.get("description", "")[:200]
+            txn_type = txn.get("type", "expense")
+
+            if txn_type == "income":
+                inc = Income(
+                    user_id=current_user.id,
+                    source=txn.get("sub_cat", "Email Import"),
+                    amount=amount,
+                    date_received=txn_date,
+                    description=desc,
+                )
+                db.session.add(inc)
+            else:
+                exp = Expense(
+                    user_id=current_user.id,
+                    category="Uncategorized",
+                    amount=amount,
+                    date=txn_date,
+                    description=desc,
+                    is_essential=False,
+                    is_subscription=False,
+                )
+                db.session.add(exp)
+            imported_count += 1
+        except Exception:
+            continue
+    db.session.commit()
+    return jsonify({"success": True, "imported": imported_count})
 
 
 @app.route("/bank-statement/upload", methods=["POST"])
